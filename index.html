@@ -1,0 +1,2274 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Merve Ömür — The Living Archive</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --deep-green:#6f8f6a;
+    --cream:#f4ecd8;
+    --burgundy:#a8674a;
+    --wood:#8a6034;
+    --brass:#c9a367;
+    --stone:#a89e88;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{width:100%;height:100%;overflow:hidden;background:#1a241c;font-family:'Jost',sans-serif;}
+  canvas{display:block;}
+
+  /* ---------- Loading / Intro screen ---------- */
+  #intro{
+    position:fixed;inset:0;z-index:20;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 50% 30%, #5c7a54 0%, #33452f 55%, #1a241c 100%);
+    color:var(--cream);text-align:center;padding:24px;
+    transition:opacity .8s ease;
+  }
+  #intro.hidden{opacity:0;pointer-events:none;}
+  .eyebrow{
+    letter-spacing:.35em;text-transform:uppercase;font-size:11px;color:var(--brass);
+    margin-bottom:18px;font-weight:400;
+  }
+  h1{
+    font-family:'Cormorant Garamond',serif;font-weight:500;
+    font-size:clamp(34px,6vw,64px);line-height:1.05;
+    color:var(--cream);
+  }
+  h1 .en{
+    display:block;font-size:.42em;font-style:italic;color:var(--stone);margin-top:8px;font-weight:400;
+  }
+  .subtitle{
+    margin-top:20px;font-size:14px;letter-spacing:.08em;color:#c9bfa4;max-width:440px;
+  }
+  .lang-toggle{
+    margin-top:28px;display:flex;gap:0;border:1px solid var(--brass);border-radius:999px;overflow:hidden;
+  }
+  .lang-toggle button{
+    background:transparent;border:none;color:var(--cream);padding:6px 18px;font-family:'Jost';font-size:12px;
+    letter-spacing:.1em;cursor:pointer;transition:.25s;
+  }
+  .lang-toggle button.active{background:var(--brass);color:#1a1208;}
+
+  .intro-actions{margin-top:36px;display:flex;flex-direction:column;gap:12px;align-items:center;}
+  .btn{
+    font-family:'Jost';font-size:13px;letter-spacing:.12em;text-transform:uppercase;
+    padding:14px 38px;border-radius:2px;cursor:pointer;border:1px solid var(--brass);
+    background:transparent;color:var(--cream);transition:.25s;min-width:240px;
+  }
+  .btn.primary{background:var(--brass);color:#1a1208;border-color:var(--brass);}
+  .btn:hover{background:var(--brass);color:#1a1208;}
+  .sound-row{display:flex;gap:10px;margin-top:6px;}
+  .sound-row .btn{min-width:150px;font-size:11px;padding:10px 20px;}
+
+  .controls-hint{
+    margin-top:34px;font-size:11px;color:var(--stone);letter-spacing:.06em;
+    display:flex;gap:22px;flex-wrap:wrap;justify-content:center;max-width:480px;
+  }
+  .controls-hint span b{color:var(--brass);font-weight:500;}
+
+  .privacy-note{
+    margin-top:20px;font-size:10.5px;color:#8a8271;max-width:420px;line-height:1.6;
+  }
+
+  .demo-badge{
+    position:fixed;top:16px;left:16px;z-index:15;
+    font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+    background:rgba(20,15,10,.55);color:var(--brass);border:1px solid var(--brass);
+    padding:6px 12px;border-radius:2px;backdrop-filter:blur(4px);
+  }
+
+  /* ---------- In-scene HUD ---------- */
+  #hud{position:fixed;inset:0;z-index:10;pointer-events:none;display:none;}
+  #hud.active{display:block;}
+  .crosshair{
+    position:absolute;top:50%;left:50%;width:6px;height:6px;
+    transform:translate(-50%,-50%);border-radius:50%;background:rgba(239,230,211,.75);
+  }
+  #interact-hint{
+    position:absolute;bottom:22%;left:50%;transform:translate(-50%,0);
+    background:rgba(20,15,10,.65);border:1px solid var(--brass);color:var(--cream);
+    padding:8px 16px;border-radius:2px;font-size:12px;letter-spacing:.08em;
+    opacity:0;transition:opacity .25s;backdrop-filter:blur(4px);
+  }
+  #interact-hint.show{opacity:1;}
+  #speech-bubble{
+    position:absolute;top:20%;left:50%;transform:translate(-50%,0);
+    max-width:320px;background:rgba(20,15,10,.78);border:1px solid var(--brass);
+    color:var(--cream);padding:12px 18px;border-radius:3px;font-size:13px;line-height:1.5;
+    font-style:italic;opacity:0;transition:opacity .3s;text-align:center;
+  }
+  #speech-bubble.show{opacity:1;}
+  #top-bar{
+    position:absolute;top:16px;right:16px;display:flex;gap:10px;pointer-events:auto;
+  }
+  #top-bar button{
+    background:rgba(20,15,10,.55);border:1px solid var(--brass);color:var(--cream);
+    font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:8px 12px;border-radius:2px;
+    cursor:pointer;backdrop-filter:blur(4px);
+  }
+  #room-label{
+    position:absolute;top:16px;left:16px;color:var(--cream);font-family:'Cormorant Garamond',serif;
+    font-size:20px;font-style:italic;
+  }
+  #esc-menu{
+    position:fixed;inset:0;z-index:18;background:rgba(10,15,12,.85);
+    display:none;align-items:center;justify-content:center;flex-direction:column;color:var(--cream);
+    backdrop-filter:blur(6px);
+  }
+  #esc-menu.show{display:flex;}
+  #esc-menu h2{font-family:'Cormorant Garamond',serif;font-weight:500;margin-bottom:20px;font-size:26px;}
+
+  #note-form{
+    position:fixed;inset:0;z-index:19;background:rgba(10,15,12,.85);
+    display:none;align-items:center;justify-content:center;backdrop-filter:blur(6px);
+  }
+  #note-form.show{display:flex;}
+  .note-panel{
+    width:min(420px,88vw);background:#2c3a2c;border:1px solid var(--brass);border-radius:3px;
+    padding:26px 28px;color:var(--cream);
+  }
+  .note-panel h3{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:22px;margin-bottom:8px;}
+  .note-privacy{font-size:11.5px;color:#b9ad8e;font-style:italic;margin-bottom:18px;line-height:1.5;}
+  .note-label{display:block;font-size:11px;letter-spacing:.05em;color:var(--brass);margin-bottom:6px;text-transform:uppercase;}
+  .note-hint{font-size:10.5px;color:#8a8271;margin-top:5px;margin-bottom:4px;}
+  #noteName, #noteMessage{
+    width:100%;background:#1e2b1f;border:1px solid #5c6b54;color:var(--cream);
+    padding:9px 10px;border-radius:2px;font-family:'Jost';font-size:13px;resize:vertical;
+  }
+  #noteName:focus, #noteMessage:focus{outline:none;border-color:var(--brass);}
+  .note-error{color:#e08a8a;font-size:11.5px;margin-top:8px;}
+  .note-actions{display:flex;gap:10px;margin-top:18px;}
+  .note-actions .btn{min-width:0;flex:1;padding:11px 10px;font-size:12px;}
+  .note-demo-tag{margin-top:14px;font-size:10px;color:#7d7669;line-height:1.5;}
+
+  #note-toast{
+    position:fixed;bottom:36px;left:50%;transform:translate(-50%,20px);z-index:22;
+    background:rgba(20,15,10,.85);border:1px solid var(--brass);color:var(--cream);
+    padding:12px 22px;border-radius:2px;font-size:13px;opacity:0;pointer-events:none;
+    transition:opacity .3s, transform .3s;
+  }
+  #note-toast.show{opacity:1;transform:translate(-50%,0);}
+  #click-to-play{
+    position:absolute;inset:0;display:none;align-items:flex-start;justify-content:center;
+    padding-top:80px;pointer-events:none;
+  }
+  #click-to-play.show{display:flex;}
+  #click-to-play span{
+    background:rgba(20,15,10,.72);border:1px solid var(--brass);color:var(--cream);
+    padding:10px 20px;border-radius:2px;font-size:12px;letter-spacing:.04em;text-align:center;max-width:340px;
+  }
+  #loading-bar-wrap{width:260px;height:2px;background:rgba(239,230,211,.15);margin-top:26px;}
+  #loading-bar{height:100%;width:0%;background:var(--brass);transition:width .2s;}
+  #loading-pct{margin-top:10px;font-size:11px;letter-spacing:.1em;color:var(--stone);}
+</style>
+</head>
+<body>
+
+<div class="demo-badge" id="demoBadge">DEMO ÖNİZLEME — PROTOTİP</div>
+
+<div id="intro">
+  <div class="eyebrow" id="eyebrow">Research · Design · Digital Heritage · Strategy</div>
+  <h1 id="mainTitle">Merve Ömür — The Living Archive
+    <span class="en" id="subTitleEn">Yaşayan Arşiv</span>
+  </h1>
+  <p class="subtitle" id="introText">Birinci şahıs bakış açısıyla gezilen, araştırma, tasarım ve dijital üretim çalışmalarının sergilendiği interaktif bir çalışma müzesi.</p>
+
+  <div class="lang-toggle">
+    <button class="active" id="btnTR" onclick="setLang('tr')">TR</button>
+    <button id="btnEN" onclick="setLang('en')">EN</button>
+  </div>
+
+  <div class="intro-actions">
+    <button class="btn primary" id="enterBtn" onclick="enterMuseum()">Müzeye Gir</button>
+    <button class="btn" id="quickBtn" onclick="alert(currentLang==='tr' ? 'Hızlı Portföy görünümü sonraki aşamada eklenecek.' : 'Quick Portfolio view will be added in a later stage.')">Hızlı Portföy</button>
+    <div class="sound-row">
+      <button class="btn" id="soundOnBtn" onclick="startWithSound(true)">Sesli Gir</button>
+      <button class="btn" id="soundOffBtn" onclick="startWithSound(false)">Sessiz Devam Et</button>
+    </div>
+  </div>
+
+  <div class="controls-hint" id="controlsHint">
+    <span><b>WASD</b> — Hareket</span>
+    <span><b>Mouse / Ok Tuşları</b> — Etrafına bak</span>
+    <span><b>E</b> — İncele</span>
+    <span><b>Esc</b> — Menü</span>
+  </div>
+
+  <div id="loading-bar-wrap" style="display:none;"><div id="loading-bar"></div></div>
+  <div id="loading-pct" style="display:none;"></div>
+
+  <p class="privacy-note" id="privacyNote">İsminiz yalnızca ziyaret deneyiminizi kişiselleştirmek için kullanılır. Ziyaret bilgileriniz ve bıraktığınız notlar diğer ziyaretçilere gösterilmez. İsimsiz devam edebilirsiniz.</p>
+</div>
+
+<div id="esc-menu">
+  <h2 id="escTitle">Menü</h2>
+  <button class="btn primary" style="margin-bottom:10px;" onclick="resumeFromMenu()" id="resumeBtn">Devam Et</button>
+  <button class="btn" onclick="location.reload()" id="exitBtn">Girişe Dön</button>
+</div>
+
+<div id="note-form">
+  <div class="note-panel">
+    <h3 id="noteFormTitle">Merve'ye Bir Not Bırak</h3>
+    <p class="note-privacy" id="notePrivacyText">Mesajınız yalnızca Merve tarafından görülebilir.</p>
+    <label class="note-label" for="noteName" id="nameLabelText">İsim veya takma ad (isteğe bağlı)</label>
+    <input id="noteName" type="text" maxlength="40" placeholder="">
+    <div class="note-hint" id="anonHintText">Boş bırakırsanız isimsiz olarak kaydedilir.</div>
+    <label class="note-label" for="noteMessage" id="messageLabelText" style="margin-top:14px;">Mesajınızı buraya yazın...</label>
+    <textarea id="noteMessage" maxlength="500" rows="4"></textarea>
+    <div class="note-error" id="noteErrorText" style="display:none;"></div>
+    <div class="note-actions">
+      <button class="btn primary" onclick="submitNote()" id="noteSubmitBtn">Gönder</button>
+      <button class="btn" onclick="closeNoteForm()" id="noteCancelBtn">Vazgeç</button>
+    </div>
+    <div class="note-demo-tag" id="noteDemoTagText"></div>
+  </div>
+</div>
+
+<div id="note-toast"></div>
+
+<div id="hud">
+  <div id="room-label">Giriş Salonu</div>
+  <div id="top-bar">
+    <button onclick="toggleMusic()" id="musicBtn">♪ Müzik</button>
+  </div>
+  <div class="crosshair"></div>
+  <div id="interact-hint">E — İncele</div>
+  <div id="speech-bubble"></div>
+  <div id="click-to-play">
+    <span id="clickToPlayText">Fareyi kilitlemek ve gezinmeye başlamak için ekrana tıklayın</span>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+/* ================= i18n ================= */
+let currentLang = 'tr';
+const dict = {
+  tr:{
+    eyebrow:'Araştırma · Tasarım · Dijital Miras · Strateji',
+    introText:'Birinci şahıs bakış açısıyla gezilen, araştırma, tasarım ve dijital üretim çalışmalarının sergilendiği interaktif bir çalışma müzesi.',
+    enter:'Müzeye Gir', quick:'Hızlı Portföy', soundOn:'Sesli Gir', soundOff:'Sessiz Devam Et',
+    privacy:'İsminiz yalnızca ziyaret deneyiminizi kişiselleştirmek için kullanılır. Ziyaret bilgileriniz ve bıraktığınız notlar diğer ziyaretçilere gösterilmez. İsimsiz devam edebilirsiniz.',
+    escTitle:'Menü', resume:'Devam Et', exit:'Girişe Dön',
+    roomLabel:'Giriş Salonu', interact:'E — İncele', interactBook:'E — Deftere Not Bırak',
+    interactDoorOpen:'E — Kapıyı Aç', interactDoorClose:'E — Kapıyı Kapat',
+    greeting:'Merhaba! Merve Ömür\'ün müzesine hoş geldiniz. Size eşlik etmemi ister misiniz?',
+    demo:'DEMO ÖNİZLEME — PROTOTİP', music:'♪ Müzik',
+    clickToPlay:'WASD ile hareket edin. Bakış için fareyi hareket ettirin veya ok tuşlarını kullanın — fareyi ekran kenarında tutarsanız sürekli dönersiniz.',
+    noteTitle:'Merve\'ye Bir Not Bırak', notePrivacy:'Mesajınız yalnızca Merve tarafından görülebilir.',
+    nameLabel:'İsim veya takma ad (isteğe bağlı)', anonHint:'Boş bırakırsanız isimsiz olarak kaydedilir.',
+    messageLabel:'Mesajınızı buraya yazın...', noteSubmit:'Gönder', noteCancel:'Vazgeç',
+    noteError:'Lütfen göndermeden önce bir mesaj yazın.', noteThanks:'Teşekkürler! Notunuz kaydedildi.',
+    noteDemoNote:'(Demo modu: bu not yalnızca bu oturumda, tarayıcınızda tutuluyor — henüz gerçek bir veritabanına bağlı değil.)'
+  },
+  en:{
+    eyebrow:'Research · Design · Digital Heritage · Strategy',
+    introText:'A first-person interactive study museum showcasing research, design and digital production work.',
+    enter:'Enter the Museum', quick:'Quick Portfolio', soundOn:'Enter with Sound', soundOff:'Continue Muted',
+    privacy:'Your name is used only to personalise your visit. Your visit data and notes are never shown to other visitors. You may continue anonymously.',
+    escTitle:'Menu', resume:'Resume', exit:'Return to Entrance',
+    roomLabel:'Entrance Hall', interact:'E — Examine', interactBook:'E — Leave a Note',
+    interactDoorOpen:'E — Open Door', interactDoorClose:'E — Close Door',
+    greeting:'Hello! Welcome to Merve Ömür\'s museum. Would you like me to guide you?',
+    demo:'DEMO PREVIEW — PROTOTYPE', music:'♪ Music',
+    clickToPlay:'Move with WASD. Look with your mouse or arrow keys — hold the mouse near the screen edge to keep turning.',
+    noteTitle:'Leave a Note for Merve', notePrivacy:'Your message is visible only to Merve.',
+    nameLabel:'Name or nickname (optional)', anonHint:'Leave blank to stay anonymous.',
+    messageLabel:'Write your message here...', noteSubmit:'Send', noteCancel:'Cancel',
+    noteError:'Please write a message before sending.', noteThanks:'Thank you! Your note has been saved.',
+    noteDemoNote:'(Demo mode: this note is kept only in this session, in your browser — not yet connected to a real database.)'
+  }
+};
+function setLang(l){
+  currentLang = l;
+  document.getElementById('btnTR').classList.toggle('active', l==='tr');
+  document.getElementById('btnEN').classList.toggle('active', l==='en');
+  const d = dict[l];
+  document.getElementById('eyebrow').textContent = d.eyebrow;
+  document.getElementById('introText').textContent = d.introText;
+  document.getElementById('enterBtn').textContent = d.enter;
+  document.getElementById('quickBtn').textContent = d.quick;
+  document.getElementById('soundOnBtn').textContent = d.soundOn;
+  document.getElementById('soundOffBtn').textContent = d.soundOff;
+  document.getElementById('privacyNote').textContent = d.privacy;
+  document.getElementById('escTitle').textContent = d.escTitle;
+  document.getElementById('resumeBtn').textContent = d.resume;
+  document.getElementById('exitBtn').textContent = d.exit;
+  document.getElementById('room-label').textContent = d.roomLabel;
+  document.getElementById('interact-hint').textContent = d.interact;
+  document.getElementById('demoBadge').textContent = d.demo;
+  document.getElementById('musicBtn').textContent = d.music;
+  document.getElementById('clickToPlayText').textContent = d.clickToPlay;
+  document.getElementById('noteFormTitle').textContent = d.noteTitle;
+  document.getElementById('notePrivacyText').textContent = d.notePrivacy;
+  document.getElementById('nameLabelText').textContent = d.nameLabel;
+  document.getElementById('anonHintText').textContent = d.anonHint;
+  document.getElementById('messageLabelText').textContent = d.messageLabel;
+  document.getElementById('noteSubmitBtn').textContent = d.noteSubmit;
+  document.getElementById('noteCancelBtn').textContent = d.noteCancel;
+  document.getElementById('noteDemoTagText').textContent = d.noteDemoNote;
+}
+
+/* ================= Sound ================= */
+let musicEnabled = false;
+let audioCtx, musicGain, musicOsc;
+function startWithSound(on){ musicEnabled = on; enterMuseum(); }
+function initAmbientMusic(){
+  try{
+    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    musicGain = audioCtx.createGain();
+    musicGain.gain.value = musicEnabled ? 0.05 : 0.0;
+    musicGain.connect(audioCtx.destination);
+    // very soft ambient drone as a stand-in for a licensed music track
+    [98, 147, 196].forEach((freq,i)=>{
+      const osc = audioCtx.createOscillator();
+      osc.type = 'sine'; osc.frequency.value = freq;
+      const g = audioCtx.createGain(); g.gain.value = 0.3/(i+1);
+      osc.connect(g); g.connect(musicGain); osc.start();
+    });
+  }catch(e){ console.warn('Audio unavailable', e); }
+}
+function toggleMusic(){
+  if(!musicGain) return;
+  musicEnabled = !musicEnabled;
+  musicGain.gain.value = musicEnabled ? 0.05 : 0.0;
+}
+
+/* ================= Three.js scene ================= */
+let scene, camera, renderer, clock;
+let moveF=false, moveB=false, moveL=false, moveR=false, running=false;
+let lookL=false, lookR=false, lookU=false, lookD=false;
+let yaw=0, pitch=0;
+let velocity = new THREE.Vector3();
+let pointerLocked = false;
+let lastMouseX = null, lastMouseY = null;
+let controlsReady = false;
+let deskBox, characterGroup, characterInteractRange = 3.2;
+let botBody, botEyes = [], botAntennaTip;
+let guestbookPosition, guestbookInteractRange = 2.1;
+let doorways = [], doorInteractRange = 2.4;
+let blockingBoxes = [];
+let noteFormOpen = false;
+let roomBounds = {minX:-9,maxX:9,minZ:-7,maxZ:7};
+let started = false;
+
+function enterMuseum(){
+  document.getElementById('intro').classList.add('hidden');
+  document.getElementById('hud').classList.add('active');
+  document.getElementById('loading-bar-wrap').style.display='block';
+  document.getElementById('loading-pct').style.display='block';
+  simulateLoad(()=>{
+    document.getElementById('intro').style.display='none';
+    if(!started){ initScene(); started = true; animate(); }
+    initAmbientMusic();
+    controlsReady = true;
+    const ctp = document.getElementById('click-to-play');
+    ctp.classList.add('show');
+    setTimeout(()=>ctp.classList.remove('show'), 4000);
+  });
+}
+function simulateLoad(done){
+  let p=0;
+  const bar = document.getElementById('loading-bar');
+  const pct = document.getElementById('loading-pct');
+  const iv = setInterval(()=>{
+    p += Math.random()*22+8;
+    if(p>=100){p=100; clearInterval(iv); setTimeout(done,150);}
+    bar.style.width = p+'%';
+    pct.textContent = Math.floor(p)+'%';
+  }, 90);
+}
+
+function initScene(){
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x1f2418);
+  scene.fog = new THREE.Fog(0x2a2f20, 9, 22);
+
+  camera = new THREE.PerspectiveCamera(62, window.innerWidth/window.innerHeight, 0.1, 100);
+  camera.position.set(0, 1.65, 5.5);
+
+  renderer = new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  document.body.appendChild(renderer.domElement);
+  clock = new THREE.Clock();
+
+  buildRoom();
+  buildLighting();
+  buildCharacter();
+  addArtNouveauOrnamentation();
+  buildResearchRoom();
+
+  window.addEventListener('resize', onResize);
+  document.addEventListener('keydown', onKeyDown);
+  document.addEventListener('keyup', onKeyUp);
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('pointerlockchange', onPointerLockChange);
+  renderer.domElement.addEventListener('click', requestLock);
+  document.addEventListener('pointerlockerror', ()=>{
+    console.warn('Pointer lock kullanılamıyor, doğrudan fare hareketiyle bakış moduna devam ediliyor.');
+  });
+}
+function requestLock(){
+  if(!pointerLocked && document.getElementById('intro').style.display==='none' && !document.getElementById('esc-menu').classList.contains('show')){
+    try{ renderer.domElement.requestPointerLock(); }catch(e){}
+  }
+}
+
+function woodMaterial(color){ return new THREE.MeshStandardMaterial({color, roughness:.7, metalness:.04}); }
+function darkWalnutMaterial(){ return new THREE.MeshStandardMaterial({color:0x3f2a1c, roughness:.55, metalness:.06}); }
+function stoneMaterial(color){ return new THREE.MeshStandardMaterial({color, roughness:.85, metalness:0}); }
+function plasterMaterial(color){ return new THREE.MeshStandardMaterial({color, roughness:.92, metalness:0}); }
+function brassMaterial(){ return new THREE.MeshStandardMaterial({color:0x9c7f4a, roughness:.5, metalness:.55}); }
+function darkGreenMaterial(){ return new THREE.MeshStandardMaterial({color:0x2b3d2e, roughness:.6, metalness:.08}); }
+function glassMaterial(color, opacity){ return new THREE.MeshStandardMaterial({color, roughness:.4, metalness:.05, transparent:true, opacity:opacity!==undefined?opacity:.72}); }
+
+// Ortak organik eğri yardımcı fonksiyonu — tekrarlanan kıvrımlar için
+function orgTube(points, radius, mat, segs){
+  const curve = new THREE.CatmullRomCurve3(points);
+  return new THREE.Mesh(new THREE.TubeGeometry(curve, segs||24, radius, 8, false), mat);
+}
+// Üç ana motiften biri: uzun whiplash kıvrımı (tek eğri, iki nokta arası akışkan S)
+function whiplashCurve(x, yBase, z, height, lean, mat, radius){
+  const pts = [
+    new THREE.Vector3(x, yBase, z),
+    new THREE.Vector3(x+lean*.3, yBase+height*.35, z),
+    new THREE.Vector3(x-lean*.15, yBase+height*.68, z),
+    new THREE.Vector3(x+lean*.4, yBase+height, z),
+  ];
+  return orgTube(pts, radius||.014, mat, 20);
+}
+// Üç ana motiften biri: sarmaşık/ginkgo yaprağı (küçük, tek biçim, tekrar kullanılabilir)
+function ivyLeaf(mat, scale){
+  const leaf = new THREE.Mesh(new THREE.ConeGeometry(.045*(scale||1), .16*(scale||1), 5), mat);
+  leaf.scale.set(1,1,.45);
+  return leaf;
+}
+// Üç ana motiften biri: iris/zambak formu (birkaç yaprak + merkez)
+function irisMotif(mat, accentMat, scale){
+  const s = scale||1;
+  const group = new THREE.Group();
+  for(let i=0;i<3;i++){
+    const ang = -0.5 + i*0.5;
+    const petal = new THREE.Mesh(new THREE.ConeGeometry(.03*s,.22*s,5), mat);
+    petal.rotation.z = ang;
+    petal.position.set(Math.sin(ang)*.04*s, .1*s, 0);
+    petal.scale.set(1,1,.4);
+    group.add(petal);
+  }
+  const center = new THREE.Mesh(new THREE.SphereGeometry(.025*s,8,8), accentMat);
+  group.add(center);
+  return group;
+}
+
+function buildCorinthianColumn(x, z, height){
+  const group = new THREE.Group();
+  const baseStone = darkGreenMaterial();
+  const brass = brassMaterial();
+  const shaftMat = stoneMaterial(0xd8cdb0);
+  const budMat = new THREE.MeshStandardMaterial({color:0x5a7a52, roughness:.6, metalness:.05});
+  const budAccent = new THREE.MeshStandardMaterial({color:0x8f6b3a, roughness:.5, metalness:.3});
+
+  // Alt bölüm: koyu taş/koyu yeşil kaide — yumuşak, kademesiz tek kütle
+  const baseH = .34;
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(.24,.3,baseH,20), baseStone);
+  base.position.y = baseH/2;
+  base.castShadow = true;
+  group.add(base);
+  const baseCurveTrim = new THREE.Mesh(new THREE.TorusGeometry(.235,.018,10,24), brass);
+  baseCurveTrim.position.y = baseH-.02;
+  baseCurveTrim.rotation.x = Math.PI/2;
+  group.add(baseCurveTrim);
+
+  // İnce pirinç geçiş bileziği
+  const neckRing = new THREE.Mesh(new THREE.TorusGeometry(.19,.015,10,24), brass);
+  neckRing.position.y = baseH+.03;
+  neckRing.rotation.x = Math.PI/2;
+  group.add(neckRing);
+
+  // Gövde: yukarı doğru hafifçe incelen, sığ organik oluklu
+  const shaftH = height - baseH - .95;
+  const shaftBaseY = baseH + .06;
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(.135,.185,shaftH,20), shaftMat);
+  shaft.position.y = shaftBaseY + shaftH/2;
+  shaft.castShadow = true;
+  group.add(shaft);
+  // sığ organik oluklar (klasik keskin flüt değil, yumuşak dalga hissi — ince ve az sayıda)
+  const grooveCount = 8;
+  for(let i=0;i<grooveCount;i++){
+    const ang = (i/grooveCount)*Math.PI*2;
+    const groove = new THREE.Mesh(new THREE.BoxGeometry(.014,shaftH*.9,.01), stoneMaterial(0xc2b592));
+    groove.position.set(Math.sin(ang)*.155, shaftBaseY+shaftH/2, Math.cos(ang)*.155);
+    groove.rotation.y = -ang;
+    group.add(groove);
+  }
+  // gövdeye sarılan tek bir ince sarmaşık (whiplash) — üç ana motiften biri
+  const vinePts = [];
+  const vineTurns = 2.4;
+  for(let i=0;i<=16;i++){
+    const t = i/16;
+    const ang = t*Math.PI*2*vineTurns;
+    const ry = .17 - t*.03;
+    vinePts.push(new THREE.Vector3(Math.sin(ang)*ry, shaftBaseY+shaftH*t, Math.cos(ang)*ry));
+  }
+  group.add(orgTube(vinePts, .012, brass, 40));
+  // sarmaşık üzerinde birkaç küçük yaprak
+  [.25,.5,.75].forEach(t=>{
+    const idx = Math.round(t*16);
+    const p = vinePts[idx];
+    const leaf = ivyLeaf(budMat, .8);
+    leaf.position.copy(p);
+    leaf.rotation.y = t*Math.PI*2*vineTurns;
+    leaf.rotation.x = .4;
+    group.add(leaf);
+  });
+
+  const topY = shaftBaseY + shaftH;
+
+  // Başlık: stilize açılan çiçek/tomurcuk formu (akant/volüt değil)
+  const capBase = new THREE.Mesh(new THREE.CylinderGeometry(.2,.145,.1,16), brass);
+  capBase.position.y = topY+.05;
+  group.add(capBase);
+  const bud = new THREE.Mesh(new THREE.SphereGeometry(.19,16,16,0,Math.PI*2,0,Math.PI*.62), budMat);
+  bud.position.y = topY+.14;
+  group.add(bud);
+  // açılan taç yaprakları (4-5, dışa kıvrılan)
+  const petalCount = 5;
+  for(let i=0;i<petalCount;i++){
+    const ang = (i/petalCount)*Math.PI*2;
+    const petalPts = [
+      new THREE.Vector3(Math.sin(ang)*.14, topY+.2, Math.cos(ang)*.14),
+      new THREE.Vector3(Math.sin(ang)*.28, topY+.34, Math.cos(ang)*.28),
+      new THREE.Vector3(Math.sin(ang)*.34, topY+.28, Math.cos(ang)*.34),
+    ];
+    group.add(orgTube(petalPts, .022, budMat, 12));
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(.03,8,8), budAccent);
+    tip.position.copy(petalPts[2]);
+    group.add(tip);
+  }
+  const capCenter = new THREE.Mesh(new THREE.SphereGeometry(.05,12,12), budAccent);
+  capCenter.position.y = topY+.36;
+  group.add(capCenter);
+
+  // Tavanla birleşirken dallanan ince destekler (branching)
+  [-1,1].forEach(s=>{
+    const branchPts = [
+      new THREE.Vector3(0, topY+.34, 0),
+      new THREE.Vector3(s*.12, topY+.44, .05),
+      new THREE.Vector3(s*.26, topY+.5, .08),
+    ];
+    group.add(orgTube(branchPts, .013, brass, 12));
+  });
+
+  group.position.set(x, 0, z);
+  return group;
+}
+
+function buildDoorSign(label, x, y, color){
+  const group = new THREE.Group();
+  const canvas = document.createElement('canvas');
+  canvas.width = 512; canvas.height = 160;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#f1e8d2';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.strokeStyle = 'rgba(90,70,40,0.25)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(8,8,canvas.width-16,canvas.height-16);
+  ctx.fillStyle = '#2b2419';
+  ctx.font = '500 64px Georgia, "Times New Roman", serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, canvas.width/2, canvas.height/2+4);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.anisotropy = 4;
+
+  const plate = new THREE.Mesh(new THREE.PlaneGeometry(1.1,.34), new THREE.MeshStandardMaterial({map:texture, roughness:.7}));
+  group.add(plate);
+  // ince pirinç çerçeve (dört ince şerit)
+  const brass = brassMaterial();
+  [[1.16,.04,0,.19],[1.16,.04,0,-.19],[.04,.42,.55,0],[.04,.42,-.55,0]].forEach(([w,h,px,py])=>{
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(w,h,.02), brass);
+    bar.position.set(px,py,.005);
+    group.add(bar);
+  });
+  // köşelerde küçük organik detay
+  [[-.56,.18],[.56,.18],[-.56,-.18],[.56,-.18]].forEach(([cx,cy])=>{
+    const corner = new THREE.Mesh(new THREE.SphereGeometry(.025,8,8), brass);
+    corner.position.set(cx,cy,.01);
+    group.add(corner);
+  });
+
+  group.position.set(x, y, -6.78);
+  return group;
+}
+
+function buildArtNouveauDoorway(x, z, color){
+  const group = new THREE.Group();
+  const brass = brassMaterial();
+  const accent = new THREE.MeshStandardMaterial({color, roughness:.55});
+  const roomColor = new THREE.Color(color);
+  const frameStoneColor = new THREE.Color(0xd8cba8).lerp(roomColor, 0.08);
+  const frameStone = new THREE.MeshStandardMaterial({color:frameStoneColor, roughness:.75});
+  const woodColor = new THREE.Color(0x8a5a35).lerp(roomColor, 0.1);
+  const woodDoorMat = new THREE.MeshStandardMaterial({color:woodColor, roughness:.6});
+  const woodDarkMat = new THREE.MeshStandardMaterial({color:woodColor.clone().multiplyScalar(.72), roughness:.6});
+  const ironMat = new THREE.MeshStandardMaterial({color:0x2b2419, roughness:.55, metalness:.35});
+  const budMatShared = new THREE.MeshStandardMaterial({color:0x5a7a52, roughness:.6, metalness:.05});
+
+  function tubeMesh(pts, radius, mat, segs){
+    const curve = new THREE.CatmullRomCurve3(pts);
+    const geo = new THREE.TubeGeometry(curve, segs||24, radius, 8, false);
+    return new THREE.Mesh(geo, mat);
+  }
+
+  const doorH = 2.35;      // kapı kanadı yüksekliği
+  const leafW = 0.92;      // her kanat genişliği
+  const gap = 0.03;        // kanatlar arası boşluk
+  const innerX = gap/2;    // orta eksene yakınlık
+  const outerX = gap/2 + leafW; // kanadın dış kenarı
+
+  // Kaide/basamaklar
+  const step1 = new THREE.Mesh(new THREE.BoxGeometry(2.7,.1,.4), frameStone);
+  step1.position.set(0,.05,.16);
+  group.add(step1);
+  const step2 = new THREE.Mesh(new THREE.BoxGeometry(2.45,.08,.24), frameStone);
+  step2.position.set(0,.13,.06);
+  group.add(step2);
+
+  // Pilastırlar (iki yanda ince, hafif konik sütuncuklar — kutu blok değil)
+  [-1,1].forEach(s=>{
+    const px = s*(outerX+.17);
+    const pil = new THREE.Group();
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(.16,.19,.1,16), frameStone);
+    base.position.y = .18;
+    pil.add(base);
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(.09,.13,doorH-.1,16), frameStone);
+    shaft.position.y = .21+(doorH-.1)/2;
+    shaft.castShadow = true;
+    pil.add(shaft);
+    // ince pirinç sarmaşık şeridi (kutu yiv yerine tek organik çizgi)
+    const vinePts = [];
+    for(let i=0;i<=10;i++){
+      const t = i/10;
+      const ang = t*Math.PI*3.4;
+      vinePts.push(new THREE.Vector3(Math.sin(ang)*.105, .24+t*(doorH-.34), Math.cos(ang)*.105));
+    }
+    pil.add(orgTube(vinePts, .009, brass, 26));
+    const capital = new THREE.Mesh(new THREE.CylinderGeometry(.15,.1,.14,16), frameStone);
+    capital.position.y = .21+(doorH-.1)+.07;
+    pil.add(capital);
+    // başlıkta küçük açılan tomurcuk (volüt yerine)
+    const budTip = new THREE.Mesh(new THREE.SphereGeometry(.06,10,10,0,Math.PI*2,0,Math.PI*.6), budMatShared);
+    budTip.position.y = .21+(doorH-.1)+.13;
+    pil.add(budTip);
+    pil.position.x = px;
+    group.add(pil);
+  });
+
+  const lintelY = .21 + doorH;
+
+  // Lento (kapı üstü — incelmiş, tek ince kiriş)
+  const lintel = new THREE.Mesh(new THREE.BoxGeometry(2*(outerX+.24), .09, .2), frameStone);
+  lintel.position.set(0, lintelY+.05, 0);
+  group.add(lintel);
+  const lintelTrim = orgTube([
+    new THREE.Vector3(-(outerX+.22), lintelY+.1, .1),
+    new THREE.Vector3(0, lintelY+.11, .1),
+    new THREE.Vector3(outerX+.22, lintelY+.1, .1),
+  ], .012, brass, 20);
+  group.add(lintelTrim);
+
+  // Yarım daire aydınlatma penceresi (fanlight) — düz çubuk süs yok, organik bitkisel çizgiler
+  const archR = outerX+.14;
+  const archCenter = new THREE.Vector3(0, lintelY+.15, 0);
+  const archOuter = new THREE.Mesh(
+    new THREE.TorusGeometry(archR, .05, 10, 32, Math.PI),
+    frameStone
+  );
+  archOuter.position.copy(archCenter);
+  archOuter.rotation.z = Math.PI;
+  group.add(archOuter);
+  // vitray zemini — düşük doygunlukta, kapı rengiyle uyumlu
+  const fanGlassColor = new THREE.Color(color).lerp(new THREE.Color(0xcfc8ac), 0.6);
+  const fanFillGeo = new THREE.CircleGeometry(archR-.05, 32, 0, Math.PI);
+  const fanFill = new THREE.Mesh(fanFillGeo, glassMaterial(fanGlassColor, .68));
+  fanFill.position.copy(archCenter);
+  fanFill.position.z -= .02;
+  fanFill.rotation.z = Math.PI;
+  group.add(fanFill);
+
+  // Çerçeveden doğal biçimde büyüyen ince bitkisel (whiplash) çizgiler — asimetrik, düz çubuk değil
+  const fanBaseY = archCenter.y;
+  function fanVine(startX, mirror, reach){
+    const s = mirror?-1:1;
+    const pts = [
+      new THREE.Vector3(startX, fanBaseY, .02),
+      new THREE.Vector3(startX+s*.12*reach, fanBaseY+.18*reach, .03),
+      new THREE.Vector3(startX+s*.05*reach, fanBaseY+.38*reach, .03),
+      new THREE.Vector3(startX+s*.2*reach, fanBaseY+.52*reach, .03),
+    ];
+    const vine = orgTube(pts, .011, ironMat, 24);
+    group.add(vine);
+    const leaf1 = ivyLeaf(budMatShared, .8);
+    leaf1.position.copy(pts[2]);
+    leaf1.rotation.z = s*.6;
+    group.add(leaf1);
+    const tip = new THREE.Mesh(new THREE.TorusGeometry(.032,.008,8,12,Math.PI*1.6), ironMat);
+    tip.position.copy(pts[3]);
+    group.add(tip);
+  }
+  fanVine(-archR*.55, true, 1);
+  fanVine(-archR*.15, true, .7);
+  fanVine(archR*.55, false, 1);
+  fanVine(archR*.15, false, .7);
+  // merkezi tek iris/zambak motifi (tepe noktası)
+  const centerIris = irisMotif(budMatShared, brass, 1.1);
+  centerIris.position.set(0, fanBaseY+.42, .04);
+  centerIris.rotation.x = Math.PI/2.4;
+  group.add(centerIris);
+
+  // ---- Kapı kanatları (menteşeli, açılabilir) ----
+  const leafPivots = [];
+  [-1,1].forEach(s=>{
+    const dGroup = new THREE.Group();
+    const cx = s*(innerX+leafW/2);
+
+    // Ana kanat gövdesi
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(leafW, doorH, .07), woodDoorMat);
+    panel.position.set(cx, doorH/2+.21, .04);
+    panel.castShadow = true;
+    dGroup.add(panel);
+
+    // Üst cam paneli (çerçeve + cam)
+    const glassW = leafW*.72, glassH = doorH*.42;
+    const glassY = .21 + doorH*.76;
+    const glassFrame = new THREE.Mesh(new THREE.BoxGeometry(glassW+.06, glassH+.06, .02), woodDarkMat);
+    glassFrame.position.set(cx, glassY, .085);
+    dGroup.add(glassFrame);
+    const glassColor = new THREE.Color(color).lerp(new THREE.Color(0xd8d0b4), 0.62);
+    const glass = new THREE.Mesh(new THREE.BoxGeometry(glassW, glassH, .015), glassMaterial(glassColor, .75));
+    glass.position.set(cx, glassY, .1);
+    dGroup.add(glass);
+
+    // Cam içindeki simetrik sarmal demir işi (iki kanat birbirinin aynası)
+    const scrollDir = s; // sağ/sol kanada göre kıvrım yönü
+    const p0 = new THREE.Vector3(cx - scrollDir*glassW*.28, glassY - glassH*.34, .11);
+    const p1 = new THREE.Vector3(cx - scrollDir*glassW*.1, glassY, .115);
+    const p2 = new THREE.Vector3(cx + scrollDir*glassW*.24, glassY + glassH*.34, .11);
+    const scrollStem = tubeMesh([p0,p1,p2], .013, ironMat, 24);
+    dGroup.add(scrollStem);
+    const curlTop = new THREE.Mesh(new THREE.TorusGeometry(.07,.012,8,16,Math.PI*1.8), ironMat);
+    curlTop.position.copy(p2);
+    curlTop.rotation.z = scrollDir*0.4;
+    dGroup.add(curlTop);
+    const curlBottom = new THREE.Mesh(new THREE.TorusGeometry(.055,.011,8,16,Math.PI*1.8), ironMat);
+    curlBottom.position.copy(p0);
+    curlBottom.rotation.z = scrollDir*0.4+Math.PI;
+    dGroup.add(curlBottom);
+
+    // İkinci, daha küçük ters yönlü dal (kompozisyona zenginlik katar)
+    const q0 = new THREE.Vector3(cx + scrollDir*glassW*.12, glassY - glassH*.28, .11);
+    const q1 = new THREE.Vector3(cx + scrollDir*glassW*.3, glassY - glassH*.02, .112);
+    const scrollStem2 = tubeMesh([q0,q1], .009, ironMat, 14);
+    dGroup.add(scrollStem2);
+    const curlQ = new THREE.Mesh(new THREE.TorusGeometry(.04,.009,8,14,Math.PI*1.7), ironMat);
+    curlQ.position.copy(q1);
+    curlQ.rotation.z = -scrollDir*0.5;
+    dGroup.add(curlQ);
+
+    // Yaprak vurguları (ana kıvrım boyunca birkaç nokta)
+    [ {t:.5, sc:1}, {t:.78, sc:.75} ].forEach(({t,sc})=>{
+      const leafPos = new THREE.Vector3().lerpVectors(p0,p2,t);
+      const leaf = new THREE.Mesh(new THREE.ConeGeometry(.032*sc,.12*sc,5), accent);
+      leaf.position.copy(leafPos);
+      leaf.position.y += glassH*.05;
+      leaf.rotation.z = scrollDir*0.5;
+      leaf.rotation.x = 0.3;
+      leaf.scale.set(1,1,.5);
+      dGroup.add(leaf);
+    });
+
+    // Mektup yuvası
+    const slot = new THREE.Mesh(new THREE.BoxGeometry(leafW*.34,.05,.03), brass);
+    slot.position.set(cx, .21+doorH*.42, .085);
+    dGroup.add(slot);
+    const slotInner = new THREE.Mesh(new THREE.BoxGeometry(leafW*.3,.025,.02), ironMat);
+    slotInner.position.set(cx, .21+doorH*.42, .095);
+    dGroup.add(slotInner);
+
+    // Kapı kolu (halka + arka plaka)
+    const handlePlate = new THREE.Mesh(new THREE.BoxGeometry(.09,.22,.015), brass);
+    handlePlate.position.set(cx - scrollDir*leafW*.32, .21+doorH*.34, .085);
+    dGroup.add(handlePlate);
+    const handleRing = new THREE.Mesh(new THREE.TorusGeometry(.05,.011,8,16), brass);
+    handleRing.position.set(cx - scrollDir*leafW*.32, .21+doorH*.34, .1);
+    dGroup.add(handleRing);
+
+    // Alt kabartma panel
+    const lowerPanel = new THREE.Mesh(new THREE.BoxGeometry(leafW*.68, doorH*.28, .02), woodDarkMat);
+    lowerPanel.position.set(cx, .21+doorH*.16, .085);
+    dGroup.add(lowerPanel);
+    const lowerPanelInset = new THREE.Mesh(new THREE.BoxGeometry(leafW*.56, doorH*.2, .015), woodDoorMat);
+    lowerPanelInset.position.set(cx, .21+doorH*.16, .095);
+    dGroup.add(lowerPanelInset);
+
+    // Kanadı menteşe pivotuna sar: pivot dış kenarda, dGroup içeriği aynı görsel konumda kalır
+    const hingeX = s*(outerX+.02);
+    const hingePivot = new THREE.Group();
+    hingePivot.position.set(hingeX, 0, 0.04);
+    dGroup.position.set(-hingeX, 0, -0.04);
+    hingePivot.add(dGroup);
+    hingePivot.userData.openAngle = s * Math.PI * 0.55;
+    hingePivot.rotation.y = 0;
+    group.add(hingePivot);
+    leafPivots.push(hingePivot);
+  });
+
+  // (Kapı arkasındaki eski "ışık sızıntısı" paneli kaldırıldı — artık gerçek bir oda olduğu için
+  // o saydam panel geçişte anlamsız bir cam engeline dönüşüyordu.)
+
+  group.position.set(x, 0, z);
+  return { mesh: group, leaves: leafPivots };
+}
+
+function addArtNouveauOrnamentation(){
+  const accentGold = brassMaterial();
+  const wainscotMat = darkWalnutMaterial();
+  const tendrilMat = new THREE.MeshStandardMaterial({color:0x5a7a52, roughness:.55, metalness:.12});
+
+  function tube(pts, r, mat, segs){
+    const curve = new THREE.CatmullRomCurve3(pts);
+    return new THREE.Mesh(new THREE.TubeGeometry(curve, segs||24, r, 8, false), mat);
+  }
+
+  // --- Duvar lambrisi — TEK parça sürekli dado (kutu-üstü-kutu yığma değil), organik çelenk üstte ---
+  function wainscotBand(axis, fixedCoord, start, end, rotY){
+    const len = end-start;
+    const band = new THREE.Mesh(new THREE.BoxGeometry(len, 1.02, .035), wainscotMat);
+    const mid = start+len/2;
+    if(axis==='x') band.position.set(mid, .58, fixedCoord);
+    else band.position.set(fixedCoord, .58, mid);
+    band.rotation.y = rotY;
+    scene.add(band);
+  }
+
+  // Lambri üstü dalgalı "çelenk" hattı — organik sinüs kavisli, tek ana motif olarak whiplash+yaprak
+  function wainscotGarland(axis, fixedCoord, start, end){
+    const segCount = Math.max(6, Math.round((end-start)*2));
+    const pts = [];
+    for(let i=0;i<=segCount;i++){
+      const t = i/segCount;
+      const c = start + (end-start)*t;
+      const wave = Math.sin(t*Math.PI*3.2) * .05;
+      const y = 1.12 + wave;
+      const perp = Math.cos(t*Math.PI*3.2) * .018;
+      if(axis==='x') pts.push(new THREE.Vector3(c, y, fixedCoord+perp));
+      else pts.push(new THREE.Vector3(fixedCoord+perp, y, c));
+    }
+    const garland = tube(pts, .018, accentGold, segCount*2);
+    scene.add(garland);
+    for(let i=1;i<segCount;i+=3){
+      const p = pts[i];
+      const leaf = ivyLeaf(tendrilMat, .9);
+      leaf.position.copy(p);
+      leaf.position.y += .045;
+      leaf.rotation.x = Math.PI;
+      scene.add(leaf);
+    }
+  }
+  const wallRuns = [
+    ['x', -6.83, -8.6, -0.6, 0],
+    ['x', -6.83, 0.6, 8.6, 0],
+    ['x', 6.83, -6.7, 6.7, Math.PI],
+    ['z', -8.85, -6.7, 6.7, Math.PI/2],
+    ['z', 8.85, -6.7, 6.7, -Math.PI/2],
+  ];
+  wallRuns.forEach(([axis,fc,s,e,r])=>{ wainscotBand(axis,fc,s,e,r); wainscotGarland(axis,fc,s,e); });
+
+  // İnce kıvrımlı korniş — duvar/tavan birleşimi (tüm oda çevresinde)
+  wallRuns.forEach(([axis,fc,s,e])=>{
+    const len = e-s, mid = s+len/2;
+    const pts = [];
+    const n = 8;
+    for(let i=0;i<=n;i++){
+      const t=i/n, c=s+len*t, wave=Math.sin(t*Math.PI*2.5)*.04;
+      if(axis==='x') pts.push(new THREE.Vector3(c, 4.85+wave, fc));
+      else pts.push(new THREE.Vector3(fc, 4.85+wave, c));
+    }
+    scene.add(tube(pts, .025, wainscotMat, n*2));
+  });
+
+  // --- Tavan: organik tendril kıvrımları (sütunlardan yayılan whiplash) ---
+  function ceilingTendril(originX, originZ, mirror){
+    const s = mirror?-1:1;
+    const pts = [
+      new THREE.Vector3(originX, 4.96, originZ),
+      new THREE.Vector3(originX+s*1.3, 4.96, originZ-0.35),
+      new THREE.Vector3(originX+s*.7, 4.96, originZ-1.15),
+      new THREE.Vector3(originX+s*1.75, 4.96, originZ-1.9),
+      new THREE.Vector3(originX+s*1.15, 4.96, originZ-2.9),
+    ];
+    const g = new THREE.Group();
+    g.add(tube(pts, .015, tendrilMat, 24));
+    const base = pts[2];
+    const branchPts = [base, new THREE.Vector3(base.x-s*.4, 4.96, base.z+.3), new THREE.Vector3(base.x-s*.7, 4.96, base.z+.6)];
+    g.add(tube(branchPts, .01, tendrilMat, 14));
+    const leaf = ivyLeaf(tendrilMat, 1);
+    leaf.position.copy(branchPts[1]);
+    leaf.rotation.z = s*.6; leaf.rotation.x = Math.PI/2.2;
+    g.add(leaf);
+    return g;
+  }
+  [-4.5,4.5].forEach(cx=>{
+    scene.add(ceilingTendril(cx, -1.3, false));
+    scene.add(ceilingTendril(cx, -1.3, true));
+  });
+
+  // --- Tek merkezi Art Nouveau aydınlatma elemanı (sarı ışın patlaması DEĞİL) ---
+  const fixtureGroup = new THREE.Group();
+  // ince pirinç oval tavan çerçevesi
+  const ovalFrame = new THREE.Mesh(new THREE.TorusGeometry(.85,.025,10,40), accentGold);
+  ovalFrame.scale.set(1,.62,1);
+  ovalFrame.rotation.x = Math.PI/2;
+  ovalFrame.position.set(0, 4.94, 2.6);
+  scene.add(ovalFrame);
+  // asılı ince sap
+  const rod = new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,.5,8), accentGold);
+  rod.position.set(0, 4.6, 2.6);
+  fixtureGroup.add(rod);
+  // buzlu cam tomurcuk/yaprak formu abajur (LatheGeometry ile profil)
+  const shadePts = [
+    new THREE.Vector2(0, 0),
+    new THREE.Vector2(.22, -.05),
+    new THREE.Vector2(.34, -.2),
+    new THREE.Vector2(.3, -.38),
+    new THREE.Vector2(.12, -.48),
+    new THREE.Vector2(0, -.5),
+  ];
+  const shadeGeo = new THREE.LatheGeometry(shadePts, 24);
+  const shade = new THREE.Mesh(shadeGeo, glassMaterial(0xe8dcc0, .55));
+  shade.position.set(0, 4.35, 2.6);
+  fixtureGroup.add(shade);
+  const shadeGlow = new THREE.PointLight(0xfff2da, .5, 6, 2);
+  shadeGlow.position.set(0, 4.2, 2.6);
+  fixtureGroup.add(shadeGlow);
+  scene.add(fixtureGroup);
+
+  // --- Ön duvara akıcı tendril vurguları (S-kavisli, Horta esintili) ---
+  [-8.0,8.0].forEach(x=>{
+    const dir = x<0?1:-1;
+    const pts = [
+      new THREE.Vector3(x, .25, 6.8),
+      new THREE.Vector3(x+dir*.4, 1.1, 6.8),
+      new THREE.Vector3(x-dir*.15, 2.0, 6.8),
+      new THREE.Vector3(x+dir*.45, 2.9, 6.8),
+      new THREE.Vector3(x-dir*.05, 3.7, 6.8),
+    ];
+    const wallGroup = new THREE.Group();
+    wallGroup.add(tube(pts, .015, tendrilMat, 28));
+    const leaf = ivyLeaf(tendrilMat, 1);
+    leaf.position.copy(pts[2]);
+    leaf.rotation.z = dir*.7;
+    wallGroup.add(leaf);
+    scene.add(wallGroup);
+  });
+}
+
+function buildRoom(){
+  // Floor — mat, düşük parlaklık, sıcak taş/krem
+  const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(20, 16),
+    stoneMaterial(0xcdbe9e)
+  );
+  floor.rotation.x = -Math.PI/2;
+  floor.receiveShadow = true;
+  scene.add(floor);
+
+  // İnce mozaik bordür — giriş aksını belirten, alternatif renkli ince kavisli şerit
+  const mosaicColors = [0x3a4a3a, 0x6b2e2a, 0x9c7f4a]; // koyu yeşil, bordo, pirinç
+  for(let i=0;i<3;i++){
+    const r = 2.15 + i*0.09;
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(r, r+.035, 64),
+      new THREE.MeshStandardMaterial({color:mosaicColors[i], roughness:.75, metalness: i===2?.4:.05})
+    );
+    ring.rotation.x = -Math.PI/2;
+    ring.position.y = 0.009 + i*0.001;
+    scene.add(ring);
+  }
+  // Asimetrik bitkisel madalyon (merkez) — mükemmel simetrik disk değil
+  const medallionGroup = new THREE.Group();
+  const medCurve1 = orgTube([
+    new THREE.Vector3(-.6,0,-.3), new THREE.Vector3(-.15,0,-.55), new THREE.Vector3(.3,0,-.35), new THREE.Vector3(.55,0,.1)
+  ], .02, new THREE.MeshStandardMaterial({color:0x9c7f4a, roughness:.5, metalness:.3}), 20);
+  medCurve1.rotation.x = Math.PI/2;
+  medallionGroup.add(medCurve1);
+  const medCurve2 = orgTube([
+    new THREE.Vector3(.5,0,.3), new THREE.Vector3(.1,0,.55), new THREE.Vector3(-.35,0,.4), new THREE.Vector3(-.5,0,-.05)
+  ], .016, new THREE.MeshStandardMaterial({color:0x3a4a3a, roughness:.7}), 16);
+  medCurve2.rotation.x = Math.PI/2;
+  medallionGroup.add(medCurve2);
+  medallionGroup.position.set(0, 0.01, 2.6);
+  scene.add(medallionGroup);
+
+  // Walls — sıcak krem/adaçayı mat sıva (üst bölüm)
+  const wallMat = plasterMaterial(0xe1d7bd);
+  const wallHeight = 5;
+
+  // Arka duvar — kapı konumlarında (x: -6,-2,2,6) boşluklu segmentler halinde
+  const doorGapHalf = 1.3;
+  const doorXs = [-6,-2,2,6];
+  const backSegments = [];
+  let prevEdge = -10;
+  doorXs.forEach(dx=>{
+    backSegments.push([prevEdge, dx-doorGapHalf]);
+    prevEdge = dx+doorGapHalf;
+  });
+  backSegments.push([prevEdge, 10]);
+  backSegments.forEach(([sx,ex])=>{
+    const w = ex-sx;
+    if(w<=0.05) return;
+    const seg = new THREE.Mesh(new THREE.BoxGeometry(w, wallHeight, .3), wallMat);
+    seg.position.set(sx+w/2, wallHeight/2, -7);
+    seg.receiveShadow = true;
+    scene.add(seg);
+    blockingBoxes.push(new THREE.Box3().setFromCenterAndSize(seg.position, new THREE.Vector3(w,wallHeight,.3)));
+  });
+
+  const frontWall = new THREE.Mesh(new THREE.BoxGeometry(20, wallHeight, .3), wallMat);
+  frontWall.position.set(0, wallHeight/2, 7);
+  scene.add(frontWall);
+  blockingBoxes.push(new THREE.Box3().setFromCenterAndSize(frontWall.position, new THREE.Vector3(20,wallHeight,.3)));
+
+  const leftWall = new THREE.Mesh(new THREE.BoxGeometry(.3, wallHeight, 14), wallMat);
+  leftWall.position.set(-9, wallHeight/2, 0);
+  scene.add(leftWall);
+  blockingBoxes.push(new THREE.Box3().setFromCenterAndSize(leftWall.position, new THREE.Vector3(.3,wallHeight,14)));
+
+  const rightWall = new THREE.Mesh(new THREE.BoxGeometry(.3, wallHeight, 14), wallMat);
+  rightWall.position.set(9, wallHeight/2, 0);
+  scene.add(rightWall);
+  blockingBoxes.push(new THREE.Box3().setFromCenterAndSize(rightWall.position, new THREE.Vector3(.3,wallHeight,14)));
+
+  // Köşe yumuşatmaları — keskin 90° birleşimleri organik çeyrek profille kapat
+  const walnut = darkWalnutMaterial();
+  [[-8.85,-6.85,Math.PI],[-8.85,6.85,Math.PI/2],[8.85,-6.85,-Math.PI/2],[8.85,6.85,0]].forEach(([cx,cz,rot])=>{
+    const corner = new THREE.Mesh(
+      new THREE.CylinderGeometry(.16,.18,wallHeight-.3,12,1,false,0,Math.PI/2),
+      walnut
+    );
+    corner.position.set(cx, wallHeight/2, cz);
+    corner.rotation.y = rot;
+    scene.add(corner);
+  });
+
+  // Ceiling — düz bırakılmıyor ama aşırı süslenmiyor (detaylar addArtNouveauOrnamentation'da)
+  const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(20,16), plasterMaterial(0x4a5540));
+  ceiling.rotation.x = Math.PI/2;
+  ceiling.position.y = wallHeight;
+  scene.add(ceiling);
+
+  // Art Nouveau tarzı kapı geçitleri — dört odaya yönlendirme
+  const roomDefs = [
+    {label:'Araştırma', color:0xb17a4e, x:-6},
+    {label:'Tasarım', color:0x6f8f6a, x:-2},
+    {label:'Dijital', color:0x5a8a8c, x:2},
+    {label:'Strateji', color:0xa8674a, x:6},
+  ];
+  roomDefs.forEach(r=>{
+    const doorway = buildArtNouveauDoorway(r.x, -6.82, r.color);
+    scene.add(doorway.mesh);
+    const blockBox = new THREE.Box3().setFromCenterAndSize(
+      new THREE.Vector3(r.x, 1.4, -6.85), new THREE.Vector3(doorGapHalf*2-.1, 2.6, .3)
+    );
+    doorways.push({
+      x: r.x, z: -6.82, label: r.label,
+      leaves: doorway.leaves, opened: false, blockBox
+    });
+    scene.add(buildDoorSign(r.label, r.x, 4.15, r.color));
+  });
+
+  // Karşılama bankosu — asimetrik, katmanlı, whiplash motifli (kutu blok değil)
+  const deskWalnut = darkWalnutMaterial();
+  const deskGreen = darkGreenMaterial();
+  const deskStoneTop = stoneMaterial(0xe6ddc7);
+
+  // Ana gövde: hafif kaydırılmış merkez + ikincil kütleyle kırılan simetri
+  const deskCurve = new THREE.Mesh(
+    new THREE.CylinderGeometry(1.55, 1.42, .92, 32, 1, false, 0, Math.PI),
+    deskWalnut
+  );
+  deskCurve.position.set(-0.12, 0.46, 2.62);
+  deskCurve.rotation.y = Math.PI;
+  deskCurve.castShadow = true;
+  scene.add(deskCurve);
+  // ikincil, daha küçük kütle (asimetriyi güçlendirir, S-kıvrımı hissi verir)
+  const deskCurve2 = new THREE.Mesh(
+    new THREE.CylinderGeometry(.62,.58,.86,20,1,false,0,Math.PI*.85),
+    deskWalnut
+  );
+  deskCurve2.position.set(1.05, 0.44, 2.35);
+  deskCurve2.rotation.y = Math.PI*1.15;
+  scene.add(deskCurve2);
+
+  // İnce koyu yeşil ön panel (bel bandı) + whiplash pirinç çizgisi
+  const deskPanel = new THREE.Mesh(
+    new THREE.CylinderGeometry(1.58,1.58,.32,32,1,true,0,Math.PI),
+    deskGreen
+  );
+  deskPanel.position.set(-0.12, 0.62, 2.62);
+  deskPanel.rotation.y = Math.PI;
+  scene.add(deskPanel);
+  // (masadan bağımsız duran pirinç kıvrımlar kaldırıldı — estetik geri bildirimine göre)
+
+  // Krem taş üst tabla (buzlu açık renk hissi, brass değil)
+  const deskTop = new THREE.Mesh(new THREE.CylinderGeometry(1.66,1.66,.06,32,1,false,0,Math.PI), deskStoneTop);
+  deskTop.position.set(-0.12, 0.95, 2.62);
+  deskTop.rotation.y = Math.PI;
+  scene.add(deskTop);
+  const deskTopTrim = new THREE.Mesh(new THREE.TorusGeometry(1.66,.015,8,32,Math.PI), brassMaterial());
+  deskTopTrim.position.set(-0.12, 0.98, 2.62);
+  deskTopTrim.rotation.x = Math.PI/2;
+  deskTopTrim.rotation.z = Math.PI;
+  scene.add(deskTopTrim);
+  // yumuşak geri çekilen kaide (alt, ince)
+  const deskBase = new THREE.Mesh(new THREE.CylinderGeometry(1.4,1.32,.08,32,1,false,0,Math.PI), deskWalnut.clone());
+  deskBase.position.set(-0.12, 0.06, 2.62);
+  deskBase.rotation.y = Math.PI;
+  scene.add(deskBase);
+
+  // Ziyaretçi defteri
+  const guestbook = new THREE.Group();
+  const cover = new THREE.Mesh(new THREE.BoxGeometry(.34,.045,.26), new THREE.MeshStandardMaterial({color:0x7a4a30, roughness:.6}));
+  cover.position.y = .022;
+  guestbook.add(cover);
+  const pages = new THREE.Mesh(new THREE.BoxGeometry(.31,.03,.235), new THREE.MeshStandardMaterial({color:0xefe6d3, roughness:.85}));
+  pages.position.y = .05;
+  guestbook.add(pages);
+  const ribbon = new THREE.Mesh(new THREE.BoxGeometry(.03,.05,.29), brassMaterial());
+  ribbon.position.set(.12, .04, 0);
+  guestbook.add(ribbon);
+  guestbook.rotation.y = -0.35;
+  guestbook.position.set(-0.63, 0.99, 2.52);
+  guestbook.castShadow = true;
+  scene.add(guestbook);
+  guestbookPosition = new THREE.Vector3(-0.63, 1.22, 2.52);
+
+  // Küçük mürekkep hokkası / tüy kalem (masa süsü)
+  const inkwell = new THREE.Mesh(new THREE.CylinderGeometry(.03,.035,.05,10), new THREE.MeshStandardMaterial({color:0x14100c, roughness:.3, metalness:.4}));
+  inkwell.position.set(-0.48, 1.0, 2.28);
+  scene.add(inkwell);
+  deskBox = new THREE.Box3().setFromCenterAndSize(new THREE.Vector3(0.1,0.5,2.85), new THREE.Vector3(4.0,1.3,2.6));
+
+  // Korint başlıklı sütunlar — girişin iki yanında
+  [-4.5,4.5].forEach(x=>{
+    const column = buildCorinthianColumn(x, -2, 4.7);
+    scene.add(column);
+  });
+}
+
+function buildResearchRoom(){
+  const roomX = -6;      // Araştırma kapısının x konumu ile hizalı
+  const halfW = 3.1;     // oda genişliği yarısı
+  const frontZ = -7.15;  // giriş salonu arka duvarının iç yüzü
+  const depth = 6.2;
+  const backZ = frontZ - depth;
+  const roomH = 3.5;
+
+  const floorMat = darkWalnutMaterial(); // mobilya (ahşap) rengi
+  const floorSurfaceMat = stoneMaterial(0xcdbe9e); // Giriş Salonu zeminiyle aynı
+  const wallMat = plasterMaterial(0xe8dfc8);
+  const wainscot = darkWalnutMaterial();
+  const brass = brassMaterial();
+  const earthMat = new THREE.MeshStandardMaterial({color:0xa8663f, roughness:.8});
+  const ceramicMat = new THREE.MeshStandardMaterial({color:0xb87b52, roughness:.7});
+
+  // Zemin — Giriş Salonu ile aynı ton
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(halfW*2, depth), floorSurfaceMat);
+  floor.rotation.x = -Math.PI/2;
+  floor.position.set(roomX, 0, frontZ-depth/2);
+  floor.receiveShadow = true;
+  scene.add(floor);
+
+  // Tavan — Giriş Salonu ile aynı ton
+  const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(halfW*2, depth), plasterMaterial(0x4a5540));
+  ceiling.rotation.x = Math.PI/2;
+  ceiling.position.set(roomX, roomH, frontZ-depth/2);
+  scene.add(ceiling);
+
+  // Duvarlar (arka + iki yan) + lambri
+  function wallWithWainscot(w,h,d,cx,cy,cz,rotY){
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), wallMat);
+    wall.position.set(cx,cy,cz);
+    wall.rotation.y = rotY||0;
+    scene.add(wall);
+    blockingBoxes.push(new THREE.Box3().setFromCenterAndSize(wall.position, new THREE.Vector3(rotY?d:w,h,rotY?w:d)));
+    const dado = new THREE.Mesh(new THREE.BoxGeometry(rotY?d-0.05:w-0.05, .95, .04), wainscot);
+    dado.position.set(cx, .5, cz + (rotY? (rotY>0?-.13:.13) : .22));
+    if(rotY){ dado.rotation.y = rotY; dado.position.set(cx + (rotY>0? .22:-.22), .5, cz); }
+    scene.add(dado);
+  }
+  wallWithWainscot(halfW*2+.3, roomH, .3, roomX, roomH/2, backZ, 0);
+  wallWithWainscot(depth, roomH, .3, roomX-halfW, roomH/2, frontZ-depth/2, Math.PI/2);
+  wallWithWainscot(depth, roomH, .3, roomX+halfW, roomH/2, frontZ-depth/2, Math.PI/2);
+
+  // Oda aydınlatması — yumuşak, sıcak
+  const roomAmbient = new THREE.PointLight(0xf3ead0, 1.25, 12, 1.8);
+  roomAmbient.position.set(roomX, roomH-.3, frontZ-depth/2);
+  scene.add(roomAmbient);
+  const entranceFill = new THREE.PointLight(0xf3ead0, .7, 7, 2);
+  entranceFill.position.set(roomX, roomH-.5, frontZ-1.2);
+  scene.add(entranceFill);
+  const backFill = new THREE.PointLight(0xf0e6c8, .65, 7, 2);
+  backFill.position.set(roomX, roomH-.5, backZ+1.5);
+  scene.add(backFill);
+  const leftWallFill = new THREE.PointLight(0xf0e6c8, .5, 5, 2.2);
+  leftWallFill.position.set(roomX-halfW+.6, 1.4, backZ+3.0);
+  scene.add(leftWallFill);
+  const rightWallFill = new THREE.PointLight(0xf0e6c8, .5, 5, 2.2);
+  rightWallFill.position.set(roomX+halfW-.6, 1.4, backZ+3.0);
+  scene.add(rightWallFill);
+
+  // ---- Mobilyalar ---- (plan: sol-arka köşe = L kazı alanı, sağ-arka = kitaplık,
+  // orta = çalışma masası+sandalye, sağ duvar = arşiv + boş sergi panoları, ön-sağ = seramik kaide)
+  function bookBox(w,h,d,color){ return new THREE.Mesh(new THREE.BoxGeometry(w,h,d), new THREE.MeshStandardMaterial({color, roughness:.8})); }
+
+  // ============ L BİÇİMİNDE KAZI ALANI PLATFORMU (sol-arka köşe) ============
+  // Kum efekti — canvas tabanlı gürültü dokusu (kazı alanı zemini için)
+  function makeSandTexture(baseColor, speckleColor, repeat){
+    const c = document.createElement('canvas');
+    c.width = 256; c.height = 256;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = baseColor;
+    ctx.fillRect(0,0,256,256);
+    for(let i=0;i<2200;i++){
+      const x = Math.random()*256, y = Math.random()*256;
+      const r = Math.random()*1.4+.3;
+      ctx.fillStyle = speckleColor;
+      ctx.globalAlpha = .12+Math.random()*.22;
+      ctx.beginPath();
+      ctx.arc(x,y,r,0,Math.PI*2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(repeat,repeat);
+    return tex;
+  }
+  const sandTexA = makeSandTexture('#a8916a', '#6b5638', 4);
+  const sandTexB = makeSandTexture('#9c8760', '#5f4c30', 4);
+  const digMat = new THREE.MeshStandardMaterial({color:0xe0d3ac, map:sandTexA, roughness:.88});
+  const digMatLight = new THREE.MeshStandardMaterial({color:0xe8dcb8, map:sandTexB, roughness:.88});
+  const platH = .14;
+  // Kol A: arka duvar boyunca
+  const legA_w = 3.0, legA_d = 1.85;
+  const legA = new THREE.Mesh(new THREE.BoxGeometry(legA_w, platH, legA_d), digMat);
+  legA.position.set(roomX-halfW+legA_w/2+.05, platH/2, backZ+legA_d/2+.05);
+  legA.castShadow = true;
+  scene.add(legA);
+  // Kol B: sol duvar boyunca (A ile birleşip L oluşturur)
+  const legB_w = 1.7, legB_d = 3.4;
+  const legB = new THREE.Mesh(new THREE.BoxGeometry(legB_w, platH, legB_d), digMatLight);
+  legB.position.set(roomX-halfW+legB_w/2+.05, platH/2, backZ+legA_d+legB_d/2+.05);
+  legB.castShadow = true;
+  scene.add(legB);
+  // Platforma özel, doğrudan aydınlatma (köşede kalıp karanlıkta kalmasın)
+  const digLight1 = new THREE.PointLight(0xfff2d2, .55, 6, 2.1);
+  digLight1.position.set(roomX-halfW+1.3, 2.1, backZ+1.2);
+  scene.add(digLight1);
+  const digLight2 = new THREE.PointLight(0xfff2d2, .48, 6, 2.1);
+  digLight2.position.set(roomX-halfW+.9, 2.1, backZ+3.6);
+  scene.add(digLight2);
+  // Platform kenarlığı (ahşap çerçeve hissi)
+  [[legA, legA_w, legA_d],[legB, legB_w, legB_d]].forEach(([mesh,w,d])=>{
+    const rim = new THREE.Mesh(new THREE.BoxGeometry(w+.06, .04, d+.06), wainscot);
+    rim.position.copy(mesh.position);
+    rim.position.y = platH+.02;
+    scene.add(rim);
+  });
+  // çarpışma: L'nin iki kolunu ayrı kutu olarak ekle (üstüne çıkılabilir basit bir eşik, alçak olduğu için engelleme yerine sadece görsel bırakıyoruz)
+
+  // Kazı ızgarası (grid ip çizgileri) — kol A üzerinde
+  const gridMat = new THREE.MeshStandardMaterial({color:0x2a2418, roughness:.9});
+  for(let i=1;i<4;i++){
+    const gx = roomX-halfW+.05 + (legA_w/4)*i;
+    const line = new THREE.Mesh(new THREE.BoxGeometry(.008, .01, legA_d-.1), gridMat);
+    line.position.set(gx, platH+.005, backZ+legA_d/2+.05);
+    scene.add(line);
+  }
+  for(let i=1;i<3;i++){
+    const gz = backZ+.05 + (legA_d/3)*i;
+    const line = new THREE.Mesh(new THREE.BoxGeometry(legA_w-.1, .01, .008), gridMat);
+    line.position.set(roomX-halfW+legA_w/2+.05, platH+.005, gz);
+    scene.add(line);
+  }
+  // köşe kazıkları (stake)
+  [[0,0],[legA_w-.1,0],[0,legA_d-.1],[legA_w-.1,legA_d-.1]].forEach(([dx,dz])=>{
+    const stake = new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,.18,6), wainscot);
+    stake.position.set(roomX-halfW+.1+dx, platH+.09, backZ+.1+dz);
+    stake.rotation.z = .08;
+    scene.add(stake);
+  });
+
+  // Kırık çömlek ağızları — toprağa yarı gömülü halka formları (gerçek kazı fotoğrafı esintili)
+  const potRimColors = [0xc48a5f, 0xb87b52, 0xd0996a, 0xa8663f];
+  const potRimSpots = [
+    // Kol A (arka duvar boyunca) üzerinde
+    [roomX-halfW+.7, backZ+.75, .16],
+    [roomX-halfW+1.9, backZ+.6, .13],
+    [roomX-halfW+2.4, backZ+1.4, .18],
+    [roomX-halfW+.6, backZ+1.6, .12],
+    // Kol B (sol duvar boyunca) üzerinde
+    [roomX-halfW+.65, backZ+2.6, .17],
+    [roomX-halfW+1.15, backZ+3.3, .14],
+    [roomX-halfW+.55, backZ+4.1, .15],
+    [roomX-halfW+1.05, backZ+4.7, .13],
+  ];
+  potRimSpots.forEach(([sx,sz,r],i)=>{
+    const rimMat = new THREE.MeshStandardMaterial({color:potRimColors[i%potRimColors.length], roughness:.88});
+    // kısmen kırık halka (tam çember değil, ~%75-85'i duruyor)
+    const arcLen = Math.PI*(1.5+Math.random()*.35);
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(r, r*.14, 8, 20, arcLen), rimMat);
+    rim.rotation.x = Math.PI/2; // yatık, zeminde
+    rim.rotation.z = Math.random()*Math.PI*2;
+    rim.position.set(sx, platH+.008, sz);
+    scene.add(rim);
+    // halkanın kırık ucunda birkaç dağınık parça
+    const shardBitMat = new THREE.MeshStandardMaterial({color:potRimColors[(i+1)%potRimColors.length], roughness:.88});
+    for(let j=0;j<2;j++){
+      const bit = new THREE.Mesh(new THREE.IcosahedronGeometry(r*.22,0), shardBitMat);
+      bit.scale.set(1,.25,.8);
+      const ang = Math.random()*Math.PI*2;
+      bit.position.set(sx+Math.cos(ang)*r*1.3, platH+.01, sz+Math.sin(ang)*r*1.3);
+      bit.rotation.y = Math.random()*Math.PI;
+      scene.add(bit);
+    }
+  });
+
+  // Arkeolojik nesneler — yarı gömülü seramik parçaları
+  const shardColors = [0xb87b52,0xa8663f,0x9c7050,0xc48a5f];
+  const shardSpots = [
+    [roomX-halfW+.5, backZ+.6],[roomX-halfW+1.3, backZ+.9],[roomX-halfW+.8, backZ+1.5],
+    [roomX-halfW+.4, backZ+2.4],[roomX-halfW+1.0, backZ+3.1],[roomX-halfW+.6, backZ+4.0],
+  ];
+  shardSpots.forEach(([sx,sz],i)=>{
+    const shardMat = new THREE.MeshStandardMaterial({color:shardColors[i%shardColors.length], roughness:.85});
+    // düzensiz, düzleştirilmiş kırık seramik parçası (top değil, yassı kırık form)
+    const shard = new THREE.Mesh(new THREE.IcosahedronGeometry(.06+Math.random()*.03, 0), shardMat);
+    shard.scale.set(1+Math.random()*.4, .16+Math.random()*.08, .7+Math.random()*.3);
+    shard.position.set(sx, platH+.015, sz);
+    shard.rotation.y = Math.random()*Math.PI*2;
+    shard.rotation.x = (Math.random()-.5)*.4;
+    shard.rotation.z = (Math.random()-.5)*.4;
+    scene.add(shard);
+  });
+  // Fotoğraftaki gibi: kısmen kırık, ızgara düzeninde toprağa gömülü çömlek/küp ağızları
+  function potRing(cx,cz,r){
+    const ringMat = new THREE.MeshStandardMaterial({color:0x8a5c34, roughness:.9});
+    const arc = new THREE.Mesh(new THREE.TorusGeometry(r, r*.14, 8, 22, Math.PI*(1.5+Math.random()*.35)), ringMat);
+    arc.rotation.x = Math.PI/2;
+    arc.rotation.z = Math.random()*Math.PI*2;
+    arc.position.set(cx, platH+r*.11, cz);
+    scene.add(arc);
+    // birkaç ayrık kırık parçası (halkanın tamamlanmayan kısmında)
+    const shardMat2 = new THREE.MeshStandardMaterial({color:0xa8724a, roughness:.88});
+    for(let k=0;k<2;k++){
+      const ang = Math.random()*Math.PI*2;
+      const frag = new THREE.Mesh(new THREE.TorusGeometry(r, r*.13, 6, 6, .5), shardMat2);
+      frag.rotation.x = Math.PI/2;
+      frag.rotation.z = ang;
+      frag.position.set(cx+Math.cos(ang)*r*.15, platH+r*.09, cz+Math.sin(ang)*r*.15);
+      scene.add(frag);
+    }
+    // iç dolgu — kazılmış koyu toprak izlenimi
+    const fill = new THREE.Mesh(new THREE.CircleGeometry(r*.8, 18), new THREE.MeshStandardMaterial({color:0x4a3a26, roughness:.95}));
+    fill.rotation.x = -Math.PI/2;
+    fill.position.set(cx, platH+.006, cz);
+    scene.add(fill);
+  }
+  // ---- Çakışmasız ızgara yerleşim sistemi (tüm platform yüzeyine dağıtım için) ----
+  const digGrid = [];
+  for(let zi=0; zi<3; zi++) for(let xi=0; xi<4; xi++)
+    digGrid.push([roomX-halfW+.25+xi*.82, backZ+.2+zi*.72]); // legA: 12 hücre
+  for(let xi=0; xi<2; xi++) for(let zi=0; zi<4; zi++)
+    digGrid.push([roomX-halfW+.42+xi*1.05, backZ+2.3+zi*.78]); // legB: 8 hücre
+  let digCursor = 0;
+  function nextSlot(){
+    const [gx,gz] = digGrid[digCursor++];
+    return [gx + (Math.random()-.5)*.26, gz + (Math.random()-.5)*.26];
+  }
+
+  const potSpots = [];
+  for(let i=0;i<9;i++){ const [gx,gz]=nextSlot(); potSpots.push([gx,gz,.14+Math.random()*.06]); }
+  potSpots.forEach(([px,pz,pr])=>potRing(px,pz,pr));
+
+  // Birkaç belirgin, dik duran çömlek — kaidedeki seramik kadar net görünür
+  function standingPot(cx,cz,scale,tilt){
+    const pts = [
+      new THREE.Vector2(0,0), new THREE.Vector2(.1,.015), new THREE.Vector2(.125,.09),
+      new THREE.Vector2(.08,.19), new THREE.Vector2(.095,.24), new THREE.Vector2(.06,.27)
+    ];
+    const p = new THREE.Mesh(new THREE.LatheGeometry(pts,16), ceramicMat);
+    p.scale.setScalar(scale);
+    p.position.set(cx, platH+.01, cz);
+    p.rotation.z = tilt*0.5;
+    p.rotation.x = tilt*0.3;
+    p.castShadow = true;
+    scene.add(p);
+    // seramiği aydınlatan küçük vurgu ışığı
+    const potLight = new THREE.PointLight(0xfff2d2, .3, 2.2, 2.2);
+    potLight.position.set(cx, platH+.5, cz);
+    scene.add(potLight);
+  }
+  [1.3,1.15,1.4].forEach(scale=>{
+    const [gx,gz] = nextSlot();
+    standingPot(gx, gz, scale, (Math.random()-.5)*.3);
+  });
+
+  // ============ TOTAL STATION (üç ayaklı ölçüm cihazı) ============
+  // İki nokta arasını doğru açıyla dolduran silindir (gerçek birleşen bacaklar için)
+  function legBetween(p1, p2, mat, radius){
+    const dir = new THREE.Vector3().subVectors(p2,p1);
+    const len = dir.length();
+    const mid = new THREE.Vector3().addVectors(p1,p2).multiplyScalar(.5);
+    const cyl = new THREE.Mesh(new THREE.CylinderGeometry(radius*.7, radius, len, 6), mat);
+    cyl.position.copy(mid);
+    cyl.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir.clone().normalize());
+    return cyl;
+  }
+  function buildTotalStation(cx,cz,rotY){
+    const group = new THREE.Group();
+    const legMat = new THREE.MeshStandardMaterial({color:0xc9691f, roughness:.55});
+    const bodyMat = new THREE.MeshStandardMaterial({color:0x2c2c2c, roughness:.4, metalness:.25});
+    const screenMat = new THREE.MeshStandardMaterial({color:0x1a2a1a, roughness:.3, emissive:0x2a4a2a, emissiveIntensity:.4});
+    const headY = .74;
+    const apex = new THREE.Vector3(0, headY-.02, 0);
+    for(let i=0;i<3;i++){
+      const ang = (i/3)*Math.PI*2;
+      const bottom = new THREE.Vector3(Math.sin(ang)*.4, 0, Math.cos(ang)*.4);
+      group.add(legBetween(apex, bottom, legMat, .016));
+      const foot = new THREE.Mesh(new THREE.ConeGeometry(.015,.04,6), new THREE.MeshStandardMaterial({color:0x3a3a3a,roughness:.6}));
+      foot.position.copy(bottom);
+      group.add(foot);
+      // sabitleme vidası (üçgenin gerçekten tek noktada kavuştuğunu vurgular)
+    }
+    const clamp = new THREE.Mesh(new THREE.SphereGeometry(.03,10,10), bodyMat);
+    clamp.position.copy(apex);
+    group.add(clamp);
+    const head = new THREE.Mesh(new THREE.CylinderGeometry(.06,.065,.03,14), bodyMat);
+    head.position.y = .74;
+    group.add(head);
+    const body = new THREE.Mesh(new THREE.BoxGeometry(.09,.13,.08), bodyMat);
+    body.position.y = .83;
+    group.add(body);
+    const scopeMount = new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,.14,10), bodyMat);
+    scopeMount.rotation.z = Math.PI/2;
+    scopeMount.position.set(0,.905,.015);
+    group.add(scopeMount);
+    const lens = new THREE.Mesh(new THREE.CylinderGeometry(.022,.018,.03,10), new THREE.MeshStandardMaterial({color:0x111,roughness:.2,metalness:.5}));
+    lens.rotation.z = Math.PI/2;
+    lens.position.set(.075,.905,.015);
+    group.add(lens);
+    const screen = new THREE.Mesh(new THREE.PlaneGeometry(.045,.032), screenMat);
+    screen.position.set(0,.81,.041);
+    group.add(screen);
+    const handle = new THREE.Mesh(new THREE.TorusGeometry(.028,.006,6,10,Math.PI), bodyMat);
+    handle.position.y = .955;
+    handle.rotation.x = Math.PI/2;
+    group.add(handle);
+    group.position.set(cx,0,cz);
+    group.rotation.y = rotY||0;
+    return group;
+  }
+  { const [gx,gz] = nextSlot(); scene.add(buildTotalStation(gx, gz, .4)); }
+
+  // ============ JALON (kırmızı-beyaz çizgili ölçüm çubuğu) ============
+  function buildJalon(cx,cz,tilt){
+    const group = new THREE.Group();
+    for(let i=0;i<9;i++){
+      const mat = new THREE.MeshStandardMaterial({color: i%2===0?0xc23b2e:0xf0ece0, roughness:.5});
+      const seg = new THREE.Mesh(new THREE.CylinderGeometry(.011,.011,.14,8), mat);
+      seg.position.y = .1+i*.14;
+      group.add(seg);
+    }
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(.011,.09,8), new THREE.MeshStandardMaterial({color:0x2a2a2a,roughness:.5}));
+    tip.position.y = .02;
+    group.add(tip);
+    group.position.set(cx, platH, cz);
+    group.rotation.z = tilt||0;
+    group.rotation.x = (tilt||0)*.3;
+    return group;
+  }
+  { const [gx,gz] = nextSlot(); scene.add(buildJalon(gx, gz, .05)); }
+
+  // ============ YÖN OKU (zemine işaretlenmiş) ============
+  function buildDirectionArrow(cx,cz,pointAngle){
+    const group = new THREE.Group();
+    const arrowMat = new THREE.MeshStandardMaterial({color:0xd8c840, roughness:.6});
+    const shape = new THREE.Shape();
+    shape.moveTo(0,.3);
+    shape.lineTo(-.075,.13);
+    shape.lineTo(-.03,.13);
+    shape.lineTo(-.03,-.24);
+    shape.lineTo(.03,-.24);
+    shape.lineTo(.03,.13);
+    shape.lineTo(.075,.13);
+    shape.closePath();
+    const arrow = new THREE.Mesh(new THREE.ShapeGeometry(shape), arrowMat);
+    arrow.rotation.x = -Math.PI/2;
+    group.add(arrow);
+    const nMark = new THREE.Mesh(new THREE.CircleGeometry(.05,16), new THREE.MeshStandardMaterial({color:0x2a2418, roughness:.7}));
+    nMark.rotation.x = -Math.PI/2;
+    nMark.position.set(0,.001,-.36);
+    group.add(nMark);
+    group.position.set(cx, platH+.01, cz);
+    group.rotation.y = pointAngle||0;
+    return group;
+  }
+  { const [gx,gz] = nextSlot(); scene.add(buildDirectionArrow(gx, gz, 0)); }
+
+  // ============ TAŞ TEMEL DUVARI (fotoğraftaki gibi, kazı alanını bölen alçak taş sıra) ============
+  function stoneWallSegment(x1,z1,x2,z2,rows){
+    const wallGroup = new THREE.Group();
+    const stoneMat1 = new THREE.MeshStandardMaterial({color:0x9c9280, roughness:.92});
+    const stoneMat2 = new THREE.MeshStandardMaterial({color:0x8a8070, roughness:.92});
+    const dx = x2-x1, dz = z2-z1;
+    const len = Math.sqrt(dx*dx+dz*dz);
+    const steps = Math.max(3, Math.round(len/.14));
+    for(let r=0;r<rows;r++){
+      for(let i=0;i<=steps;i++){
+        const t = i/steps;
+        const px = x1+dx*t + (Math.random()-.5)*.03;
+        const pz = z1+dz*t + (Math.random()-.5)*.03;
+        const stone = new THREE.Mesh(new THREE.IcosahedronGeometry(.055+Math.random()*.025,0), (i+r)%2===0?stoneMat1:stoneMat2);
+        stone.scale.set(1,.65+Math.random()*.2,.85+Math.random()*.3);
+        stone.position.set(px, platH+.03+r*.075, pz);
+        stone.rotation.y = Math.random()*Math.PI*2;
+        wallGroup.add(stone);
+      }
+    }
+    // üstte ince toprak/harç kapağı (fotoğraftaki gibi)
+    const capMat = new THREE.MeshStandardMaterial({color:0xc4b48c, roughness:.9});
+    const capGeo = new THREE.BoxGeometry(len+.06, .035, .1);
+    const cap = new THREE.Mesh(capGeo, capMat);
+    cap.position.set((x1+x2)/2, platH+.03+rows*.075+.02, (z1+z2)/2);
+    cap.rotation.y = Math.atan2(dx,dz);
+    wallGroup.add(cap);
+    return wallGroup;
+  }
+  // L platformun bir kısmını bölen alçak taş temel hattı — köşeyi küçük bir "sahne" haline getir
+  { const [gx,gz] = nextSlot();
+    scene.add(stoneWallSegment(gx, gz, gx, gz+.4, 2));
+    scene.add(stoneWallSegment(gx, gz+.4, gx+.4, gz+.4, 2));
+    // aralarına ek kısa bir taş duvar parçası — set hissini güçlendirir
+    scene.add(stoneWallSegment(gx+.12, gz+.45, gx+.35, gz+.55, 1));
+
+    // Yatık (devrilmiş) çömlek — dik değil, yan yatmış halde
+    function lyingPot(cx,cz,scale,rotY){
+      const pts = [
+        new THREE.Vector2(0,0), new THREE.Vector2(.1,.015), new THREE.Vector2(.125,.09),
+        new THREE.Vector2(.08,.19), new THREE.Vector2(.095,.24), new THREE.Vector2(.06,.27)
+      ];
+      const p = new THREE.Mesh(new THREE.LatheGeometry(pts,16), ceramicMat);
+      p.scale.setScalar(scale);
+      p.rotation.x = Math.PI/2; // yan yatır
+      p.rotation.z = rotY;
+      p.position.set(cx, platH+.06*scale, cz);
+      p.castShadow = true;
+      scene.add(p);
+      const potLight = new THREE.PointLight(0xfff2d2, .3, 2, 2.2);
+      potLight.position.set(cx, platH+.4, cz);
+      scene.add(potLight);
+    }
+    lyingPot(gx-.28, gz+.12, 1.1, .3);
+    lyingPot(gx+.4, gz+.4, .95, -.6);
+
+    // Yatık çömleklerin etrafına dağılmış kırık parçalar
+    const nearShardMat = new THREE.MeshStandardMaterial({color:0xa8724a, roughness:.86});
+    for(let i=0;i<6;i++){
+      const ang = Math.random()*Math.PI*2;
+      const dist = .12+Math.random()*.3;
+      const frag = new THREE.Mesh(new THREE.IcosahedronGeometry(.035+Math.random()*.025,0), nearShardMat);
+      frag.scale.set(1+Math.random()*.3,.2+Math.random()*.15,.7+Math.random()*.3);
+      frag.position.set(gx+Math.cos(ang)*dist, platH+.015, gz+.2+Math.sin(ang)*dist);
+      frag.rotation.y = Math.random()*Math.PI*2;
+      scene.add(frag);
+    }
+  }
+
+  // ============ KOVA ============
+  function buildBucket(cx,cz){
+    const group = new THREE.Group();
+    const s = 1.7; // büyütme katsayısı
+    const bucketMat = new THREE.MeshStandardMaterial({color:0x5a6a72, roughness:.5, metalness:.3});
+    const bucket = new THREE.Mesh(new THREE.CylinderGeometry(.075*s,.06*s,.11*s,14), bucketMat);
+    bucket.position.y = .055*s;
+    group.add(bucket);
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(.075*s,.007*s,8,16), bucketMat);
+    rim.position.y = .11*s;
+    rim.rotation.x = Math.PI/2;
+    group.add(rim);
+    const handle = new THREE.Mesh(new THREE.TorusGeometry(.075*s,.006*s,6,12,Math.PI), new THREE.MeshStandardMaterial({color:0x2a2a2a,roughness:.5,metalness:.4}));
+    handle.position.y = .13*s;
+    handle.rotation.z = Math.PI;
+    group.add(handle);
+    // içindeki toprak/buluntu izlenimi
+    const dirtFill = new THREE.Mesh(new THREE.CylinderGeometry(.068*s,.068*s,.02*s,14), new THREE.MeshStandardMaterial({color:0x4a3a26,roughness:.95}));
+    dirtFill.position.y = .105*s;
+    group.add(dirtFill);
+    group.position.set(cx, platH, cz);
+    return group;
+  }
+  { const [gx,gz] = nextSlot(); scene.add(buildBucket(gx, gz)); }
+
+  // ============ EL ÇAPASI (küçük kazı çapası) ============
+  function buildHandPick(cx,cz,rot){
+    const group = new THREE.Group();
+    const woodMat2 = new THREE.MeshStandardMaterial({color:0x8a6238, roughness:.7});
+    const metalMat = new THREE.MeshStandardMaterial({color:0x6b6b6b, roughness:.4, metalness:.6});
+    const handle = new THREE.Mesh(new THREE.CylinderGeometry(.011,.013,.22,8), woodMat2);
+    handle.rotation.z = Math.PI/2;
+    group.add(handle);
+    const head = new THREE.Mesh(new THREE.ConeGeometry(.014,.13,6), metalMat);
+    head.rotation.z = Math.PI/2.4;
+    head.position.set(.14,.045,0);
+    group.add(head);
+    group.position.set(cx, platH+.02, cz);
+    group.rotation.y = rot||0;
+    group.rotation.z = .25;
+    return group;
+  }
+  { const [gx,gz] = nextSlot(); scene.add(buildHandPick(gx, gz, .6)); }
+
+
+  // Kazı alanı çevresinde dağınık moloz/taş parçaları (fotoğraftaki kayalık çevre hissi)
+  const rubbleMat = new THREE.MeshStandardMaterial({color:0x8a8272, roughness:.95});
+  for(let i=0;i<10;i++){
+    let rx, rz;
+    if(Math.random()<0.55){ // legA içinde
+      rx = roomX-halfW+.15+Math.random()*2.75;
+      rz = backZ+.15+Math.random()*1.65;
+    } else { // legB içinde
+      rx = roomX-halfW+.15+Math.random()*1.45;
+      rz = backZ+1.9+Math.random()*3.2;
+    }
+    const rock = new THREE.Mesh(new THREE.IcosahedronGeometry(.03+Math.random()*.05,0), rubbleMat);
+    rock.scale.set(1,.5+Math.random()*.3,1);
+    rock.position.set(rx, platH+.02, rz);
+    rock.rotation.y = Math.random()*Math.PI*2;
+    scene.add(rock);
+  }
+
+  // Köşeyi düzenleyen küçük sahne: iki seramik parça + aralarını ayıran taş sıra dizisi
+  const cornerX = roomX-halfW+1.05, cornerZ = backZ+2.85;
+  const cornerPts = [
+    new THREE.Vector2(0,0), new THREE.Vector2(.1,.015), new THREE.Vector2(.125,.09),
+    new THREE.Vector2(.08,.19), new THREE.Vector2(.095,.24), new THREE.Vector2(.06,.27)
+  ];
+  const cornerPot1 = new THREE.Mesh(new THREE.LatheGeometry(cornerPts,16), ceramicMat);
+  cornerPot1.scale.setScalar(.85);
+  cornerPot1.position.set(cornerX-.32, platH+.01, cornerZ);
+  cornerPot1.rotation.z = .1;
+  scene.add(cornerPot1);
+  const cornerPot2 = new THREE.Mesh(new THREE.LatheGeometry(cornerPts,16), ceramicMat);
+  cornerPot2.scale.setScalar(.7);
+  cornerPot2.position.set(cornerX+.34, platH+.01, cornerZ+.15);
+  cornerPot2.rotation.z = -.08;
+  scene.add(cornerPot2);
+  const cornerPotLight = new THREE.PointLight(0xfff2d2, .35, 2.2, 2.2);
+  cornerPotLight.position.set(cornerX, platH+.4, cornerZ);
+  scene.add(cornerPotLight);
+  // ayıran ince taş sıra dizisi (tek sıra, düz hat)
+  scene.add(stoneWallSegment(cornerX-.05, cornerZ-.15, cornerX-.05, cornerZ+.35, 1));
+
+  // Çalışma aletleri: fırça — platformun kenarında
+  const brushHandle = new THREE.Mesh(new THREE.CylinderGeometry(.013,.016,.26,6), wainscot);
+  brushHandle.position.set(roomX-halfW+1.55, platH+.08, backZ+1.0);
+  brushHandle.rotation.z = Math.PI/2.3;
+  scene.add(brushHandle);
+  const brushHead = new THREE.Mesh(new THREE.ConeGeometry(.03,.085,8), new THREE.MeshStandardMaterial({color:0xd6c9a8,roughness:.9}));
+  brushHead.position.set(roomX-halfW+1.8, platH+.1, backZ+1.0);
+  brushHead.rotation.z = Math.PI/2.3;
+  scene.add(brushHead);
+
+  // ============ ÇALIŞMA MASASI + SANDALYE (kitaplığın önünde, sandalye arada) ============
+  const tableX = roomX+halfW-.95, tableZ = backZ+1.9;
+  const tableTop = new THREE.Mesh(new THREE.BoxGeometry(1.5,.06,.9), floorMat);
+  tableTop.position.set(tableX, .92, tableZ);
+  tableTop.castShadow = true;
+  scene.add(tableTop);
+  [[-.65,-.38],[.65,-.38],[-.65,.38],[.65,.38]].forEach(([dx,dz])=>{
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(.035,.04,.9,8), floorMat);
+    leg.position.set(tableX+dx, .46, tableZ+dz);
+    scene.add(leg);
+  });
+  blockingBoxes.push(new THREE.Box3().setFromCenterAndSize(new THREE.Vector3(tableX,.5,tableZ), new THREE.Vector3(1.55,1.0,.95)));
+  const deskLamp = new THREE.PointLight(0xffdca8, .9, 4.5, 2);
+  deskLamp.position.set(tableX, 1.6, tableZ);
+  scene.add(deskLamp);
+  // sandalye — masa ile kitaplık arasında, sırtı kitaplığa dönük, masaya bakıyor
+  const chairZ = backZ+1.05;
+  const chairSeat = new THREE.Mesh(new THREE.BoxGeometry(.42,.05,.42), floorMat);
+  chairSeat.position.set(tableX, .48, chairZ);
+  scene.add(chairSeat);
+  const chairBack = new THREE.Mesh(new THREE.BoxGeometry(.42,.5,.04), floorMat);
+  chairBack.position.set(tableX, .74, chairZ-.19);
+  scene.add(chairBack);
+  [[-.17,-.17],[.17,-.17],[-.17,.17],[.17,.17]].forEach(([dx,dz])=>{
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,.46,6), floorMat);
+    leg.position.set(tableX+dx, .23, chairZ+dz);
+    scene.add(leg);
+  });
+
+  // Masa üstü: not defteri, kalem, PDF okuma standı, bilgisayar
+  const notebook = bookBox(.26,.02,.19, 0xefe6d0);
+  notebook.position.set(tableX-.55, .96, tableZ-.15);
+  notebook.rotation.y = .15;
+  scene.add(notebook);
+  const pen = new THREE.Mesh(new THREE.CylinderGeometry(.006,.006,.16,6), brass);
+  pen.position.set(tableX-.4, .965, tableZ-.2);
+  pen.rotation.z = Math.PI/2.3;
+  scene.add(pen);
+
+  const standBase = new THREE.Mesh(new THREE.BoxGeometry(.22,.02,.16), wainscot);
+  standBase.position.set(tableX+.5, .95, tableZ-.15);
+  scene.add(standBase);
+  const standBoard = new THREE.Mesh(new THREE.BoxGeometry(.2,.26,.015), wainscot);
+  standBoard.position.set(tableX+.5, 1.07, tableZ-.24);
+  standBoard.rotation.x = -.5;
+  scene.add(standBoard);
+  const standPaper = new THREE.Mesh(new THREE.PlaneGeometry(.16,.22), new THREE.MeshStandardMaterial({color:0xf1e9d4, roughness:.9}));
+  standPaper.position.set(tableX+.5, 1.08, tableZ-.235);
+  standPaper.rotation.x = -.5;
+  scene.add(standPaper);
+
+  const monitorStand = new THREE.Mesh(new THREE.CylinderGeometry(.03,.05,.12,10), new THREE.MeshStandardMaterial({color:0x2a2620, roughness:.5}));
+  monitorStand.position.set(tableX, .98, tableZ+.3);
+  scene.add(monitorStand);
+  const monitor = new THREE.Mesh(new THREE.BoxGeometry(.46,.3,.025), new THREE.MeshStandardMaterial({color:0x1c1a16, roughness:.4}));
+  monitor.position.set(tableX, 1.19, tableZ+.35);
+  monitor.rotation.y = Math.PI; // ekran sandalyeye (kullanıcıya) dönük olsun
+  scene.add(monitor);
+  const monitorScreen = new THREE.Mesh(new THREE.PlaneGeometry(.4,.25), glassMaterial(0x8fa89c,.7));
+  monitorScreen.position.set(tableX, 1.19, tableZ+.337);
+  monitorScreen.rotation.y = Math.PI;
+  scene.add(monitorScreen);
+
+  // ============ KİTAPLIK (arka duvar boyunca, sağ köşeden platforma kadar uzanır) ============
+  const shelfGroup = new THREE.Group();
+  const shelfRightEdge = roomX+halfW-.15;           // sağ duvar köşesine yakın
+  const shelfLeftEdge = roomX-halfW+3.05;            // platformun sağ kenarına kadar (legA ile aynı hizada biter)
+  const shelfW = shelfRightEdge - shelfLeftEdge;
+  const shelfH = 2.4, shelfD = .34;
+  // arka panel
+  const backPanel = new THREE.Mesh(new THREE.BoxGeometry(shelfW-.02, shelfH, .03), floorMat);
+  backPanel.position.set(0, shelfH/2, -shelfD/2+.015);
+  shelfGroup.add(backPanel);
+  // yan paneller
+  [-1,1].forEach(s=>{
+    const endPanel = new THREE.Mesh(new THREE.BoxGeometry(.03, shelfH, shelfD), floorMat);
+    endPanel.position.set(s*(shelfW/2-.015), shelfH/2, 0);
+    shelfGroup.add(endPanel);
+  });
+  // üst kapak
+  const topPanel = new THREE.Mesh(new THREE.BoxGeometry(shelfW, .03, shelfD), floorMat);
+  topPanel.position.set(0, shelfH, 0);
+  shelfGroup.add(topPanel);
+
+  const bookColors = [0x8a4a30,0x3a4a3a,0x6b2e2a,0x9c7f4a,0x5a4a30,0x7a5a3a,0x4a3a2a,0x6b5a3a];
+  const rowCount = 5;
+  for(let row=0; row<rowCount; row++){
+    const rowY = .3 + row*.5;
+    const shelfBoard = new THREE.Mesh(new THREE.BoxGeometry(shelfW-.03,.025,shelfD-.02), wainscot);
+    shelfBoard.position.y = rowY-.24;
+    shelfGroup.add(shelfBoard);
+    let bx = -shelfW/2+.1;
+    while(bx < shelfW/2-.1){
+      const bw = 0.05+Math.random()*.045;
+      const bh = .3+Math.random()*.13;
+      const color = bookColors[Math.floor(Math.random()*bookColors.length)];
+      const book = bookBox(bw,bh,shelfD-.1,color);
+      book.position.set(bx+bw/2, rowY-.24+bh/2+.015, 0);
+      book.rotation.y = (Math.random()-0.5)*.06;
+      shelfGroup.add(book);
+      bx += bw+.008;
+    }
+    // ara sıra yatık duran kitap yığını
+    if(row%2===1){
+      const stackX = -shelfW/2 + .3 + row*.6;
+      const stack = bookBox(.32,.06,shelfD-.14, bookColors[(row+2)%bookColors.length]);
+      stack.position.set(stackX, rowY-.24+.4, 0);
+      shelfGroup.add(stack);
+      const stack2 = bookBox(.28,.055,shelfD-.16, bookColors[(row+5)%bookColors.length]);
+      stack2.position.set(stackX, rowY-.24+.46, 0);
+      shelfGroup.add(stack2);
+    }
+  }
+  const shelfCenterX = (shelfRightEdge+shelfLeftEdge)/2;
+  shelfGroup.position.set(shelfCenterX, 0, backZ+.3);
+  scene.add(shelfGroup);
+  blockingBoxes.push(new THREE.Box3().setFromCenterAndSize(
+    new THREE.Vector3(shelfCenterX, shelfH/2, backZ+.3), new THREE.Vector3(shelfW,shelfH,shelfD)
+  ));
+
+  // ============ ARŞİV ÇEKMECELERİ (sağ duvar, orta) ============
+  const archiveGroup = new THREE.Group();
+  const archW=.9, archH=1.0, archD=.48;
+  const archiveBody = new THREE.Mesh(new THREE.BoxGeometry(archW,archH,archD), floorMat);
+  archiveBody.position.y = archH/2;
+  archiveGroup.add(archiveBody);
+  for(let i=0;i<4;i++){
+    const drawerFront = new THREE.Mesh(new THREE.BoxGeometry(archW-.06,.19,.02), wainscot);
+    drawerFront.position.set(0, .13+i*.23, archD/2+.005);
+    archiveGroup.add(drawerFront);
+    const handle = new THREE.Mesh(new THREE.CylinderGeometry(.01,.01,.13,6), brass);
+    handle.rotation.z = Math.PI/2;
+    handle.position.set(0, .13+i*.23, archD/2+.03);
+    archiveGroup.add(handle);
+  }
+  archiveGroup.position.set(roomX+halfW-.35, 0, frontZ-3.0);
+  archiveGroup.rotation.y = -Math.PI/2;
+  scene.add(archiveGroup);
+  blockingBoxes.push(new THREE.Box3().setFromCenterAndSize(
+    new THREE.Vector3(roomX+halfW-.35, archH/2, frontZ-3.0), new THREE.Vector3(archD,archH,archW)
+  ));
+
+  // ============ SERAMİK İNCELEME KAİDESİ (ön-sağ, girişe yakın) ============
+  const pedX = roomX+halfW-.65, pedZ = frontZ-.9;
+  const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(.22,.26,.85,16), wainscot);
+  pedestal.position.set(pedX, .43, pedZ);
+  scene.add(pedestal);
+  const pedestalTrim = new THREE.Mesh(new THREE.TorusGeometry(.22,.012,8,20), brass);
+  pedestalTrim.position.set(pedX, .85, pedZ);
+  pedestalTrim.rotation.x = Math.PI/2;
+  scene.add(pedestalTrim);
+  const potPts = [
+    new THREE.Vector2(0,0), new THREE.Vector2(.13,.02), new THREE.Vector2(.16,.12),
+    new THREE.Vector2(.1,.24), new THREE.Vector2(.12,.3), new THREE.Vector2(.08,.34)
+  ];
+  const pot = new THREE.Mesh(new THREE.LatheGeometry(potPts, 16), ceramicMat);
+  pot.position.set(pedX, .89, pedZ);
+  scene.add(pot);
+  blockingBoxes.push(new THREE.Box3().setFromCenterAndSize(new THREE.Vector3(pedX,.43,pedZ), new THREE.Vector3(.5,.9,.5)));
+
+  // ============ BOŞ SERGİ PANOLARI (sağ duvar boyunca — ileride kişisel çizim/çalışmalar için) ============
+  function exhibitPanel(cx,cy,cz,rotY,w,h){
+    // koyu ceviz dış çerçeve — krem duvardan net ayrışsın
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(w+.14,h+.14,.05), wainscot);
+    frame.position.set(cx,cy,cz);
+    frame.rotation.y = rotY;
+    scene.add(frame);
+    // ince pirinç iç şerit
+    const innerTrim = new THREE.Mesh(new THREE.BoxGeometry(w+.04,h+.04,.045), brass);
+    innerTrim.position.set(cx + Math.sin(rotY)*.006, cy, cz + Math.cos(rotY)*.006);
+    innerTrim.rotation.y = rotY;
+    scene.add(innerTrim);
+    // panel yüzeyi — parlak, belirgin krem beyazı (duvardan net ayrışması için)
+    const panel = new THREE.Mesh(new THREE.PlaneGeometry(w,h), new THREE.MeshStandardMaterial({color:0xfaf5e8, emissive:0x3a3020, emissiveIntensity:.4, roughness:.75}));
+    panel.position.set(cx + Math.sin(rotY)*.03, cy, cz + Math.cos(rotY)*.03);
+    panel.rotation.y = rotY;
+    scene.add(panel);
+    // panoyu aydınlatan küçük vurgu ışığı
+    const panelLight = new THREE.PointLight(0xfff3dc, .5, 2.5, 2);
+    panelLight.position.set(cx + Math.sin(rotY)*.6, cy+.3, cz + Math.cos(rotY)*.6);
+    scene.add(panelLight);
+    // küçük pirinç etiket tutucu (alt kenar)
+    const tag = new THREE.Mesh(new THREE.BoxGeometry(w*.35,.05,.015), brass);
+    tag.position.set(cx + Math.sin(rotY)*.04, cy-h/2-.12, cz + Math.cos(rotY)*.04);
+    tag.rotation.y = rotY;
+    scene.add(tag);
+  }
+  exhibitPanel(roomX+halfW-.22, 1.85, backZ+4.6, -Math.PI/2, .95, 1.15);
+  exhibitPanel(roomX+halfW-.22, 1.85, frontZ-2.2, -Math.PI/2, .95, 1.15);
+  exhibitPanel(roomX+halfW-.22, 1.85, backZ+2.15, -Math.PI/2, .95, 1.15);
+  exhibitPanel(roomX+halfW-.22, 1.85, backZ+1.05, -Math.PI/2, .95, 1.15);
+  // sol duvarda, platformun üstünde kalan boş alanda panolar
+  exhibitPanel(roomX-halfW+.22, 2.55, backZ+5.4, Math.PI/2, .85, .85);
+  exhibitPanel(roomX-halfW+.22, 2.55, backZ+3.0, Math.PI/2, .85, .85);
+  exhibitPanel(roomX-halfW+.22, 2.55, backZ+.9, Math.PI/2, .85, .85);
+
+  // Oda geçişi eşiği (giriş salonundan gelen ziyaretçi için)
+  const threshold = new THREE.Mesh(new THREE.BoxGeometry(2.4,.03,.3), floorMat);
+  threshold.position.set(roomX, .016, frontZ+.05);
+  scene.add(threshold);
+}
+
+function buildLighting(){
+  // Genel ortam: sıcak nötr kırık beyaz (~3400K hissi), aşırı doymuş değil
+  const ambient = new THREE.AmbientLight(0x6b6558, .3);
+  scene.add(ambient);
+  const hemi = new THREE.HemisphereLight(0xcfc6b0, 0x3a352c, .38);
+  scene.add(hemi);
+
+  // Banko üstü ana ışık — sıcak beyaz, aşırı sarı değil
+  const warm = new THREE.PointLight(0xfff1dc, 1.05, 12, 2.1);
+  warm.position.set(0, 3.4, 2.6);
+  warm.castShadow = true;
+  scene.add(warm);
+
+  const fillCenter = new THREE.PointLight(0xf3ead6, 0.42, 15, 2.2);
+  fillCenter.position.set(0, 4.2, -2);
+  scene.add(fillCenter);
+
+  // Kapı spotları — pirinç ve vitrayı vurgulamak için sıcak beyaz, dar açı
+  const spot1 = new THREE.SpotLight(0xfff0da, 1.3, 9, Math.PI/8, .6);
+  spot1.position.set(-4, 4.3, -3.2);
+  spot1.target.position.set(-6,1.2,-6.8);
+  scene.add(spot1); scene.add(spot1.target);
+
+  const spot2 = new THREE.SpotLight(0xfff0da, 1.25, 9, Math.PI/8, .6);
+  spot2.position.set(4, 4.3, -3.2);
+  spot2.target.position.set(6,1.2,-6.8);
+  scene.add(spot2); scene.add(spot2.target);
+
+  const spot3 = new THREE.SpotLight(0xfff0da, 1.15, 9, Math.PI/8, .6);
+  spot3.position.set(-1.3, 4.3, -3.2);
+  spot3.target.position.set(-2,1.2,-6.8);
+  scene.add(spot3); scene.add(spot3.target);
+
+  const spot4 = new THREE.SpotLight(0xfff0da, 1.15, 9, Math.PI/8, .6);
+  spot4.position.set(1.3, 4.3, -3.2);
+  spot4.target.position.set(2,1.2,-6.8);
+  scene.add(spot4); scene.add(spot4.target);
+
+  // Banko için ayrı vurgu spotu
+  const deskSpot = new THREE.SpotLight(0xfff1dc, 1.1, 8, Math.PI/7, .55);
+  deskSpot.position.set(0, 3.6, 4.2);
+  deskSpot.target.position.set(0, 1, 2.6);
+  scene.add(deskSpot); scene.add(deskSpot.target);
+
+  // Müze adı / giriş yönü için tavan ışığı (aşağıda eklenecek fikstürle eşleşir)
+  const nameSpot = new THREE.SpotLight(0xfff3e0, .95, 10, Math.PI/6, .6);
+  nameSpot.position.set(0, 4.9, 4.5);
+  nameSpot.target.position.set(0, 2, 6.5);
+  scene.add(nameSpot); scene.add(nameSpot.target);
+}
+
+function buildCharacter(){
+  characterGroup = new THREE.Group();
+
+  const bodyMat = new THREE.MeshStandardMaterial({color:0xe4d9b8, roughness:.35, metalness:.25});
+  const trimMat = brassMaterial();
+  const eyeMat = new THREE.MeshStandardMaterial({color:0x1a140d, roughness:.3, metalness:.1});
+  const mouthMat = new THREE.MeshStandardMaterial({color:0xa8674a, roughness:.4, metalness:.2});
+  const glowMat = new THREE.MeshStandardMaterial({color:0x6f8f6a, roughness:.5, metalness:.4, emissive:0x3f5c3a, emissiveIntensity:.4});
+
+  // Yuvarlak gövde
+  const body = new THREE.Mesh(new THREE.SphereGeometry(.42, 32, 32), bodyMat);
+  body.position.y = 1.15;
+  body.castShadow = true;
+  characterGroup.add(body);
+  botBody = body;
+
+  // Pirinç ekvator bandı (Art Nouveau detay)
+  const band = new THREE.Mesh(new THREE.TorusGeometry(.42, .025, 12, 40), trimMat);
+  band.position.y = 1.15;
+  band.rotation.x = Math.PI/2;
+  characterGroup.add(band);
+
+  // Gözler
+  const eyeGeo = new THREE.SphereGeometry(.055, 16, 16);
+  const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+  eyeL.position.set(-.15, 1.2, .37);
+  characterGroup.add(eyeL);
+  const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
+  eyeR.position.set(.15, 1.2, .37);
+  characterGroup.add(eyeR);
+  botEyes = [eyeL, eyeR];
+
+  // Gülümseyen ağız (kavisli ince şerit)
+  const mouth = new THREE.Mesh(new THREE.TorusGeometry(.13, .018, 8, 20, Math.PI*.8), mouthMat);
+  mouth.position.set(0, 1.06, .39);
+  mouth.rotation.z = Math.PI + Math.PI*0.1;
+  characterGroup.add(mouth);
+
+  // Anten
+  const antennaStem = new THREE.Mesh(new THREE.CylinderGeometry(.015,.02,.22,8), trimMat);
+  antennaStem.position.y = 1.62;
+  characterGroup.add(antennaStem);
+  const antennaTip = new THREE.Mesh(new THREE.SphereGeometry(.05,12,12), glowMat);
+  antennaTip.position.y = 1.74;
+  characterGroup.add(antennaTip);
+  botAntennaTip = antennaTip;
+
+  // Küçük süzülme kaidesi
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(.32,.36,.08,24), trimMat);
+  base.position.y = .55;
+  characterGroup.add(base);
+  const baseGlow = new THREE.Mesh(new THREE.TorusGeometry(.3,.02,10,32), glowMat);
+  baseGlow.position.y = .52;
+  baseGlow.rotation.x = Math.PI/2;
+  characterGroup.add(baseGlow);
+
+  characterGroup.scale.setScalar(0.32);
+  characterGroup.position.set(0.45, 0.99, 2.57);
+  scene.add(characterGroup);
+}
+
+/* ---------- Movement & controls ---------- */
+function onKeyDown(e){
+  const tag = document.activeElement && document.activeElement.tagName;
+  if(tag === 'INPUT' || tag === 'TEXTAREA'){
+    if(e.code === 'Escape'){ closeNoteForm(); }
+    return;
+  }
+  if(noteFormOpen) return;
+  if(e.code==='KeyW') moveF=true;
+  if(e.code==='KeyS') moveB=true;
+  if(e.code==='KeyA') moveL=true;
+  if(e.code==='KeyD') moveR=true;
+  if(e.code==='ShiftLeft') running=true;
+  if(e.code==='Escape') openMenu();
+  if(e.code==='KeyE') tryInteract();
+  if(e.code==='ArrowLeft'){ lookL=true; e.preventDefault(); }
+  if(e.code==='ArrowRight'){ lookR=true; e.preventDefault(); }
+  if(e.code==='ArrowUp'){ lookU=true; e.preventDefault(); }
+  if(e.code==='ArrowDown'){ lookD=true; e.preventDefault(); }
+}
+function onKeyUp(e){
+  if(e.code==='KeyW') moveF=false;
+  if(e.code==='KeyS') moveB=false;
+  if(e.code==='KeyA') moveL=false;
+  if(e.code==='KeyD') moveR=false;
+  if(e.code==='ShiftLeft') running=false;
+  if(e.code==='ArrowLeft') lookL=false;
+  if(e.code==='ArrowRight') lookR=false;
+  if(e.code==='ArrowUp') lookU=false;
+  if(e.code==='ArrowDown') lookD=false;
+}
+let edgeYawSpeed = 0;
+function onMouseMove(e){
+  if(!controlsReady || document.getElementById('esc-menu').classList.contains('show') || noteFormOpen){
+    lastMouseX = null; lastMouseY = null; edgeYawSpeed = 0;
+    return;
+  }
+  if(pointerLocked){
+    const sensitivity = 0.0022;
+    yaw -= e.movementX * sensitivity;
+    pitch -= e.movementY * sensitivity;
+    edgeYawSpeed = 0;
+  } else {
+    if(lastMouseX === null){ lastMouseX = e.clientX; lastMouseY = e.clientY; return; }
+    const dx = e.clientX - lastMouseX;
+    const dy = e.clientY - lastMouseY;
+    lastMouseX = e.clientX; lastMouseY = e.clientY;
+    // Pencere boyutundan bağımsız: pencerenin tamamını kat etmek ~180° dönüş sağlar
+    const yawRange = Math.PI * 1.6;
+    const pitchRange = Math.PI * 1.1;
+    yaw -= (dx / window.innerWidth) * yawRange;
+    pitch -= (dy / window.innerHeight) * pitchRange;
+
+    // Kenar döndürme: imleç pencere kenarına yaklaşınca sürekli dönüş başlar
+    // (gerçek fare pointer lock olmadan sınırlı hareket ettiği için tam 360° dönüşü mümkün kılar)
+    const margin = Math.max(90, window.innerWidth * 0.16);
+    if(e.clientX < margin){
+      edgeYawSpeed = (margin - e.clientX) / margin;
+    } else if(e.clientX > window.innerWidth - margin){
+      edgeYawSpeed = -(margin - (window.innerWidth - e.clientX)) / margin;
+    } else {
+      edgeYawSpeed = 0;
+    }
+  }
+  pitch = Math.max(-1.2, Math.min(1.2, pitch));
+}
+window.addEventListener('mouseleave', ()=>{ edgeYawSpeed = 0; lastMouseX=null; lastMouseY=null; });
+function onPointerLockChange(){
+  pointerLocked = document.pointerLockElement === renderer.domElement;
+  if(pointerLocked) document.getElementById('click-to-play').classList.remove('show');
+}
+function openMenu(){
+  document.getElementById('esc-menu').classList.add('show');
+  if(document.pointerLockElement) document.exitPointerLock();
+}
+function resumeFromMenu(){
+  document.getElementById('esc-menu').classList.remove('show');
+  renderer.domElement.requestPointerLock();
+}
+
+let sessionNotes = [];
+
+function openNoteForm(){
+  noteFormOpen = true;
+  if(document.pointerLockElement) document.exitPointerLock();
+  document.getElementById('note-form').classList.add('show');
+  document.getElementById('noteErrorText').style.display = 'none';
+  setTimeout(()=>document.getElementById('noteName').focus(), 50);
+}
+function closeNoteForm(){
+  noteFormOpen = false;
+  document.getElementById('note-form').classList.remove('show');
+}
+function submitNote(){
+  const name = document.getElementById('noteName').value.trim();
+  const message = document.getElementById('noteMessage').value.trim();
+  const errEl = document.getElementById('noteErrorText');
+  if(!message){
+    errEl.textContent = dict[currentLang].noteError;
+    errEl.style.display = 'block';
+    return;
+  }
+  sessionNotes.push({ name: name || null, message, ts: Date.now() });
+  document.getElementById('noteName').value = '';
+  document.getElementById('noteMessage').value = '';
+  closeNoteForm();
+  showToast(dict[currentLang].noteThanks);
+}
+function showToast(text){
+  const toast = document.getElementById('note-toast');
+  toast.textContent = text;
+  toast.classList.add('show');
+  clearTimeout(window._toastTimeout);
+  window._toastTimeout = setTimeout(()=>toast.classList.remove('show'), 3200);
+}
+
+function tryInteract(){
+  if(noteFormOpen) return;
+  const charPos = new THREE.Vector3(0.45, 1.2, 2.57);
+  const distChar = camera.position.distanceTo(charPos);
+  const distBook = guestbookPosition ? camera.position.distanceTo(guestbookPosition) : Infinity;
+
+  let nearestDoor = null, nearestDoorDist = Infinity;
+  doorways.forEach(d=>{
+    const dp = new THREE.Vector3(d.x, 1.5, d.z);
+    const dist = camera.position.distanceTo(dp);
+    if(dist < nearestDoorDist){ nearestDoorDist = dist; nearestDoor = d; }
+  });
+
+  const candidates = [
+    {type:'book', dist: distBook, range: guestbookInteractRange},
+    {type:'char', dist: distChar, range: characterInteractRange},
+    {type:'door', dist: nearestDoorDist, range: doorInteractRange},
+  ].filter(c=>c.dist < c.range).sort((a,b)=>a.dist-b.dist);
+
+  if(candidates.length===0) return;
+  const chosen = candidates[0].type;
+
+  if(chosen==='book'){
+    openNoteForm();
+  } else if(chosen==='char'){
+    const bubble = document.getElementById('speech-bubble');
+    bubble.textContent = dict[currentLang].greeting;
+    bubble.classList.add('show');
+    clearTimeout(window._bubbleTimeout);
+    window._bubbleTimeout = setTimeout(()=>bubble.classList.remove('show'), 3200);
+  } else if(chosen==='door' && nearestDoor){
+    nearestDoor.opened = !nearestDoor.opened;
+    nearestDoor.leaves.forEach(pivot=>{
+      pivot.userData.target = nearestDoor.opened ? pivot.userData.openAngle : 0;
+    });
+  }
+}
+
+function onResize(){
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function testCollision(pos){
+  const testBox = new THREE.Box3().setFromCenterAndSize(pos, new THREE.Vector3(.5,1,.5));
+  if(deskBox.intersectsBox(testBox)) return true;
+  for(let i=0;i<blockingBoxes.length;i++){
+    if(blockingBoxes[i].intersectsBox(testBox)) return true;
+  }
+  for(let i=0;i<doorways.length;i++){
+    const d = doorways[i];
+    if(!d.opened && d.blockBox && d.blockBox.intersectsBox(testBox)) return true;
+  }
+  return false;
+}
+
+function updateMovement(dt){
+  // Ok tuşlarıyla bakış (fare kilidi olmayan ortamlarda tam dönüş garantisi)
+  const lookSpeed = 1.8;
+  if(lookL) yaw += lookSpeed*dt;
+  if(lookR) yaw -= lookSpeed*dt;
+  if(lookU) pitch = Math.min(1.2, pitch + lookSpeed*.7*dt);
+  if(lookD) pitch = Math.max(-1.2, pitch - lookSpeed*.7*dt);
+  if(edgeYawSpeed !== 0) yaw += edgeYawSpeed * 3.6 * dt;
+
+  camera.rotation.set(pitch, yaw, 0, 'YXZ');
+  const speed = (running?5.4:3.2) * dt;
+  const dir = new THREE.Vector3();
+  const forward = new THREE.Vector3(Math.sin(yaw),0,Math.cos(yaw)).multiplyScalar(-1);
+  const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+
+  if(moveF) dir.add(forward);
+  if(moveB) dir.sub(forward);
+  if(moveL) dir.sub(right);
+  if(moveR) dir.add(right);
+  if(dir.lengthSq()>0){ dir.normalize().multiplyScalar(speed); }
+
+  const worldMax = 60; // güvenlik sınırı (gerçek engelleme duvarlarla sağlanır)
+  const nextFull = camera.position.clone().add(dir);
+  nextFull.x = Math.max(-worldMax, Math.min(worldMax, nextFull.x));
+  nextFull.z = Math.max(-worldMax, Math.min(worldMax, nextFull.z));
+
+  if(!testCollision(new THREE.Vector3(nextFull.x, camera.position.y, nextFull.z))){
+    camera.position.x = nextFull.x;
+    camera.position.z = nextFull.z;
+  } else {
+    // eksen bazlı kayma: X veya Z ayrı ayrı denenir (duvar boyunca kayma hissi)
+    const tryX = new THREE.Vector3(nextFull.x, camera.position.y, camera.position.z);
+    if(!testCollision(tryX)) camera.position.x = nextFull.x;
+    const tryZ = new THREE.Vector3(camera.position.x, camera.position.y, nextFull.z);
+    if(!testCollision(tryZ)) camera.position.z = nextFull.z;
+  }
+  camera.position.y = 1.65;
+
+  // interact hint — robot, defter ve kapılar arasında en yakın olanı göster
+  const charPos = new THREE.Vector3(0.45, 1.2, 2.57);
+  const distChar = camera.position.distanceTo(charPos);
+  const distBook = guestbookPosition ? camera.position.distanceTo(guestbookPosition) : Infinity;
+  let nearestDoorDist = Infinity, nearestDoorOpened = false;
+  doorways.forEach(d=>{
+    const dp = new THREE.Vector3(d.x, 1.5, d.z);
+    const dist = camera.position.distanceTo(dp);
+    if(dist < nearestDoorDist){ nearestDoorDist = dist; nearestDoorOpened = d.opened; }
+  });
+  const hint = document.getElementById('interact-hint');
+  const hintCandidates = [
+    {type:'book', dist: distBook, range: guestbookInteractRange, text: dict[currentLang].interactBook},
+    {type:'char', dist: distChar, range: characterInteractRange, text: dict[currentLang].interact},
+    {type:'door', dist: nearestDoorDist, range: doorInteractRange, text: nearestDoorOpened ? dict[currentLang].interactDoorClose : dict[currentLang].interactDoorOpen},
+  ].filter(c=>c.dist < c.range).sort((a,b)=>a.dist-b.dist);
+  if(hintCandidates.length){
+    hint.textContent = hintCandidates[0].text;
+    hint.classList.add('show');
+  } else {
+    hint.classList.remove('show');
+  }
+
+  // kapı kanadı açılma animasyonu (yumuşak geçiş)
+  doorways.forEach(d=>{
+    d.leaves.forEach(pivot=>{
+      const target = pivot.userData.target || 0;
+      pivot.rotation.y += (target - pivot.rotation.y) * Math.min(dt*3, 1);
+    });
+  });
+}
+
+function animate(){
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  if(controlsReady && !document.getElementById('esc-menu').classList.contains('show') && !noteFormOpen) updateMovement(dt);
+  // robot için hafif süzülme + yavaş dönüş + anten parlaması (masa üstü taban: 1.06)
+  if(characterGroup){
+    characterGroup.position.y = 0.99 + Math.sin(clock.elapsedTime*1.1)*0.012;
+    characterGroup.rotation.y = Math.sin(clock.elapsedTime*0.35)*0.35;
+  }
+  if(botAntennaTip){
+    const pulse = 0.4 + Math.sin(clock.elapsedTime*2.2)*0.3;
+    botAntennaTip.material.emissiveIntensity = pulse;
+  }
+  renderer.render(scene, camera);
+}
+</script>
+</body>
+</html>
