@@ -163,6 +163,68 @@
   #loading-bar-wrap{width:260px;height:2px;background:rgba(239,230,211,.15);margin-top:26px;}
   #loading-bar{height:100%;width:0%;background:var(--brass);transition:width .2s;}
   #loading-pct{margin-top:10px;font-size:11px;letter-spacing:.1em;color:var(--stone);}
+
+  /* ================= Mobil kontroller ================= */
+  .mobile-only{display:none;}
+  body.is-mobile .mobile-only{display:block;}
+  body.is-mobile .desktop-only{display:none !important;}
+
+  #joystick-zone{
+    position:fixed; left:22px; bottom:calc(22px + env(safe-area-inset-bottom,0px));
+    width:112px;height:112px; z-index:14; pointer-events:auto;
+    touch-action:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
+  }
+  #joystick-outer{
+    position:absolute; inset:0; border-radius:50%;
+    background:rgba(20,26,18,.42); border:1.5px solid rgba(156,127,74,.55);
+    backdrop-filter:blur(2px);
+  }
+  #joystick-outer::after{
+    content:''; position:absolute; inset:8px; border-radius:50%;
+    border:1px solid rgba(239,230,211,.15);
+  }
+  #joystick-knob{
+    position:absolute; left:50%; top:50%; width:44px; height:44px; margin:-22px 0 0 -22px;
+    border-radius:50%; background:rgba(156,127,74,.55); border:1px solid rgba(239,230,211,.5);
+    transition:background .15s;
+  }
+  #joystick-zone.active #joystick-knob{background:rgba(156,127,74,.85);}
+
+  #mobile-interact-btn{
+    position:fixed; right:24px; bottom:calc(30px + env(safe-area-inset-bottom,0px));
+    z-index:14; padding:14px 22px; border-radius:3px;
+    background:rgba(20,26,18,.72); border:1px solid var(--brass); color:var(--cream);
+    font-family:'Jost'; font-size:13px; letter-spacing:.08em; text-transform:uppercase;
+    opacity:0; pointer-events:none; transition:opacity .2s;
+    touch-action:none; -webkit-user-select:none; user-select:none;
+  }
+  #mobile-interact-btn.show{opacity:1; pointer-events:auto;}
+
+  #mobile-top-bar{
+    position:fixed; top:calc(14px + env(safe-area-inset-top,0px)); right:calc(14px + env(safe-area-inset-right,0px));
+    z-index:16; display:flex; gap:8px; pointer-events:auto;
+  }
+  #mobile-top-bar button{
+    background:rgba(20,26,18,.6); border:1px solid var(--brass); color:var(--cream);
+    font-size:10px; letter-spacing:.06em; padding:9px 11px; border-radius:2px;
+    touch-action:manipulation;
+  }
+
+  #orientation-hint{
+    position:fixed; top:calc(10px + env(safe-area-inset-top,0px)); left:50%; transform:translateX(-50%);
+    z-index:17; background:rgba(20,26,18,.82); border:1px solid var(--brass); color:var(--cream);
+    padding:8px 16px; border-radius:2px; font-size:11px; text-align:center; max-width:80vw;
+    display:none;
+  }
+  #orientation-hint.show{display:block;}
+
+  body.is-mobile #hud, body.is-mobile canvas{
+    touch-action:none; overscroll-behavior:none;
+    -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
+  }
+  body.is-mobile #note-form, body.is-mobile #note-form *{
+    touch-action:auto; -webkit-user-select:auto; user-select:auto;
+  }
 </style>
 </head>
 <body>
@@ -190,11 +252,16 @@
     </div>
   </div>
 
-  <div class="controls-hint" id="controlsHint">
+  <div class="controls-hint desktop-only" id="controlsHint">
     <span><b>WASD</b> — Hareket</span>
     <span><b>Mouse / Ok Tuşları</b> — Etrafına bak</span>
     <span><b>E</b> — İncele</span>
     <span><b>Esc</b> — Menü</span>
+  </div>
+  <div class="controls-hint mobile-only" id="controlsHintMobile">
+    <span id="mobileHint1"><b>Sol kontrol</b> — Hareket et</span>
+    <span id="mobileHint2"><b>Ekranı sürükle</b> — Etrafına bak</span>
+    <span id="mobileHint3"><b>İNCELE</b> — Eserleri aç</span>
   </div>
 
   <div id="loading-bar-wrap" style="display:none;"><div id="loading-bar"></div></div>
@@ -231,20 +298,53 @@
 
 <div id="hud">
   <div id="room-label">Giriş Salonu</div>
-  <div id="top-bar">
+  <div id="top-bar" class="desktop-only">
     <button onclick="toggleMusic()" id="musicBtn">♪ Müzik</button>
   </div>
   <div class="crosshair"></div>
   <div id="interact-hint">E — İncele</div>
   <div id="speech-bubble"></div>
-  <div id="click-to-play">
+  <div id="click-to-play" class="desktop-only">
     <span id="clickToPlayText">Fareyi kilitlemek ve gezinmeye başlamak için ekrana tıklayın</span>
   </div>
+
+  <div id="mobile-top-bar" class="mobile-only">
+    <button onclick="openMenu()" id="mobileMenuBtn">☰</button>
+    <button onclick="toggleMusic()" id="mobileMusicBtn">♪</button>
+  </div>
+  <div id="orientation-hint" class="mobile-only">Daha rahat bir müze deneyimi için telefonunuzu yatay çevirebilirsiniz.</div>
+  <div id="joystick-zone" class="mobile-only">
+    <div id="joystick-outer"></div>
+    <div id="joystick-knob"></div>
+  </div>
+  <button id="mobile-interact-btn" class="mobile-only" onclick="tryInteract()">İNCELE</button>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <script>
+/* ================= Cihaz tespiti ================= */
+function detectMobile(){
+  return window.matchMedia('(pointer: coarse)').matches ||
+         navigator.maxTouchPoints > 0 ||
+         ('ontouchstart' in window);
+}
+let isMobile = detectMobile();
+if(isMobile) document.body.classList.add('is-mobile');
+
+function controlsReadySafe(){ return typeof controlsReady!=='undefined' && controlsReady; }
+function updateOrientationHint(){
+  const hint = document.getElementById('orientation-hint');
+  if(!hint) return;
+  if(isMobile && controlsReadySafe() && window.innerWidth < window.innerHeight){
+    hint.classList.add('show');
+  } else {
+    hint.classList.remove('show');
+  }
+}
+window.addEventListener('resize', updateOrientationHint);
+window.addEventListener('orientationchange', updateOrientationHint);
+
 /* ================= i18n ================= */
 let currentLang = 'tr';
 const dict = {
@@ -256,6 +356,9 @@ const dict = {
     escTitle:'Menü', resume:'Devam Et', exit:'Girişe Dön',
     roomLabel:'Giriş Salonu', interact:'E — İncele', interactBook:'E — Deftere Not Bırak',
     interactDoorOpen:'E — Kapıyı Aç', interactDoorClose:'E — Kapıyı Kapat',
+    mobileMove:'<b>Sol kontrol</b> — Hareket et', mobileLook:'<b>Ekranı sürükle</b> — Etrafına bak',
+    mobileView:'<b>İNCELE</b> — Eserleri aç', mobileViewBtn:'İNCELE',
+    orientationMsg:'Daha rahat bir müze deneyimi için telefonunuzu yatay çevirebilirsiniz.',
     greeting:'Merhaba! Merve Ömür\'ün müzesine hoş geldiniz. Size eşlik etmemi ister misiniz?',
     demo:'DEMO ÖNİZLEME — PROTOTİP', music:'♪ Müzik',
     clickToPlay:'WASD ile hareket edin. Bakış için fareyi hareket ettirin veya ok tuşlarını kullanın — fareyi ekran kenarında tutarsanız sürekli dönersiniz.',
@@ -273,6 +376,9 @@ const dict = {
     escTitle:'Menu', resume:'Resume', exit:'Return to Entrance',
     roomLabel:'Entrance Hall', interact:'E — Examine', interactBook:'E — Leave a Note',
     interactDoorOpen:'E — Open Door', interactDoorClose:'E — Close Door',
+    mobileMove:'<b>Left control</b> — Move', mobileLook:'<b>Drag the screen</b> — Look around',
+    mobileView:'<b>VIEW</b> — Open exhibits', mobileViewBtn:'VIEW',
+    orientationMsg:'You can turn your phone sideways for a more comfortable museum experience.',
     greeting:'Hello! Welcome to Merve Ömür\'s museum. Would you like me to guide you?',
     demo:'DEMO PREVIEW — PROTOTYPE', music:'♪ Music',
     clickToPlay:'Move with WASD. Look with your mouse or arrow keys — hold the mouse near the screen edge to keep turning.',
@@ -303,6 +409,14 @@ function setLang(l){
   document.getElementById('demoBadge').textContent = d.demo;
   document.getElementById('musicBtn').textContent = d.music;
   document.getElementById('clickToPlayText').textContent = d.clickToPlay;
+  const mh1=document.getElementById('mobileHint1'), mh2=document.getElementById('mobileHint2'), mh3=document.getElementById('mobileHint3');
+  if(mh1) mh1.innerHTML = d.mobileMove;
+  if(mh2) mh2.innerHTML = d.mobileLook;
+  if(mh3) mh3.innerHTML = d.mobileView;
+  const mvb = document.getElementById('mobile-interact-btn');
+  if(mvb) mvb.textContent = d.mobileViewBtn;
+  const oh = document.getElementById('orientation-hint');
+  if(oh) oh.textContent = d.orientationMsg;
   document.getElementById('noteFormTitle').textContent = d.noteTitle;
   document.getElementById('notePrivacyText').textContent = d.notePrivacy;
   document.getElementById('nameLabelText').textContent = d.nameLabel;
@@ -342,6 +456,7 @@ function toggleMusic(){
 let scene, camera, renderer, clock;
 let moveF=false, moveB=false, moveL=false, moveR=false, running=false;
 let lookL=false, lookR=false, lookU=false, lookD=false;
+let joyForward=0, joyRight=0; // mobil joystick analog eksenleri (-1..1)
 let yaw=0, pitch=0;
 let velocity = new THREE.Vector3();
 let pointerLocked = false;
@@ -391,10 +506,10 @@ function initScene(){
   camera = new THREE.PerspectiveCamera(62, window.innerWidth/window.innerHeight, 0.1, 100);
   camera.position.set(0, 1.65, 5.5);
 
-  renderer = new THREE.WebGLRenderer({antialias:true});
+  renderer = new THREE.WebGLRenderer({antialias:!isMobile});
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.shadowMap.enabled = true;
+  renderer.setPixelRatio(isMobile ? Math.min(window.devicePixelRatio, 1.5) : Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = !isMobile;
   document.body.appendChild(renderer.domElement);
   clock = new THREE.Clock();
 
@@ -404,6 +519,7 @@ function initScene(){
   addArtNouveauOrnamentation();
   buildResearchRoom();
 
+  if(isMobile){ setupMobileControls(); }
   window.addEventListener('resize', onResize);
   document.addEventListener('keydown', onKeyDown);
   document.addEventListener('keyup', onKeyUp);
@@ -415,9 +531,97 @@ function initScene(){
   });
 }
 function requestLock(){
+  if(isMobile) return;
   if(!pointerLocked && document.getElementById('intro').style.display==='none' && !document.getElementById('esc-menu').classList.contains('show')){
     try{ renderer.domElement.requestPointerLock(); }catch(e){}
   }
+}
+
+/* ================= Mobil dokunmatik kontroller ================= */
+let mobileLookSensitivity = 0.0032;
+function uiBlocked(){
+  return document.getElementById('esc-menu').classList.contains('show') ||
+         noteFormOpen ||
+         document.getElementById('intro').style.display!=='none';
+}
+
+function setupMobileControls(){
+  // ---- Sanal joystick (sol alt, hareket) ----
+  const joyZone = document.getElementById('joystick-zone');
+  const joyKnob = document.getElementById('joystick-knob');
+  const joyState = {active:false, pointerId:null, centerX:0, centerY:0, maxR:38};
+
+  function joyUpdateFromPoint(clientX, clientY){
+    let dx = clientX - joyState.centerX;
+    let dy = clientY - joyState.centerY;
+    const dist = Math.sqrt(dx*dx+dy*dy);
+    if(dist > joyState.maxR){ dx = dx/dist*joyState.maxR; dy = dy/dist*joyState.maxR; }
+    joyKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+    joyForward = -dy / joyState.maxR;
+    joyRight = dx / joyState.maxR;
+  }
+  function joyReset(){
+    joyForward = 0; joyRight = 0;
+    joyKnob.style.transform = 'translate(0px,0px)';
+    joyZone.classList.remove('active');
+  }
+  joyZone.addEventListener('pointerdown', (e)=>{
+    if(uiBlocked() || joyState.active) return;
+    joyState.active = true;
+    joyState.pointerId = e.pointerId;
+    const rect = joyZone.getBoundingClientRect();
+    joyState.centerX = rect.left + rect.width/2;
+    joyState.centerY = rect.top + rect.height/2;
+    joyZone.classList.add('active');
+    try{ joyZone.setPointerCapture(e.pointerId); }catch(err){}
+    joyUpdateFromPoint(e.clientX, e.clientY);
+    e.preventDefault();
+  });
+  joyZone.addEventListener('pointermove', (e)=>{
+    if(!joyState.active || e.pointerId!==joyState.pointerId) return;
+    joyUpdateFromPoint(e.clientX, e.clientY);
+    e.preventDefault();
+  });
+  function joyEnd(e){
+    if(e.pointerId!==joyState.pointerId) return;
+    joyState.active = false;
+    joyState.pointerId = null;
+    joyReset();
+  }
+  joyZone.addEventListener('pointerup', joyEnd);
+  joyZone.addEventListener('pointercancel', joyEnd);
+
+  // ---- Dokunmatik bakış kontrolü (joystick/buton dışındaki boş Canvas alanı) ----
+  const lookState = {pointerId:null, lastX:0, lastY:0};
+  renderer.domElement.addEventListener('pointerdown', (e)=>{
+    if(e.pointerType!=='touch') return;
+    if(uiBlocked() || lookState.pointerId!==null) return;
+    lookState.pointerId = e.pointerId;
+    lookState.lastX = e.clientX; lookState.lastY = e.clientY;
+    try{ renderer.domElement.setPointerCapture(e.pointerId); }catch(err){}
+  });
+  renderer.domElement.addEventListener('pointermove', (e)=>{
+    if(e.pointerType!=='touch' || e.pointerId!==lookState.pointerId) return;
+    if(uiBlocked()) return;
+    const dx = e.clientX - lookState.lastX, dy = e.clientY - lookState.lastY;
+    lookState.lastX = e.clientX; lookState.lastY = e.clientY;
+    yaw -= dx * mobileLookSensitivity * 1.4;
+    pitch -= dy * mobileLookSensitivity * 1.4;
+    pitch = Math.max(-1.2, Math.min(1.2, pitch));
+  });
+  function lookEnd(e){
+    if(e.pointerId!==lookState.pointerId) return;
+    lookState.pointerId = null;
+  }
+  renderer.domElement.addEventListener('pointerup', lookEnd);
+  renderer.domElement.addEventListener('pointercancel', lookEnd);
+
+  // ---- Güvenli sıfırlama: odak kaybı, yön değişikliği ----
+  window.addEventListener('blur', ()=>{ joyReset(); lookState.pointerId=null; });
+  document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ joyReset(); lookState.pointerId=null; } });
+  window.addEventListener('orientationchange', ()=>{ joyReset(); lookState.pointerId=null; updateOrientationHint(); });
+
+  updateOrientationHint();
 }
 
 function woodMaterial(color){ return new THREE.MeshStandardMaterial({color, roughness:.7, metalness:.04}); }
@@ -2044,6 +2248,7 @@ function onKeyUp(e){
 }
 let edgeYawSpeed = 0;
 function onMouseMove(e){
+  if(isMobile) return;
   if(!controlsReady || document.getElementById('esc-menu').classList.contains('show') || noteFormOpen){
     lastMouseX = null; lastMouseY = null; edgeYawSpeed = 0;
     return;
@@ -2088,7 +2293,7 @@ function openMenu(){
 }
 function resumeFromMenu(){
   document.getElementById('esc-menu').classList.remove('show');
-  renderer.domElement.requestPointerLock();
+  if(!isMobile) renderer.domElement.requestPointerLock();
 }
 
 let sessionNotes = [];
@@ -2199,11 +2404,16 @@ function updateMovement(dt){
   const forward = new THREE.Vector3(Math.sin(yaw),0,Math.cos(yaw)).multiplyScalar(-1);
   const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
 
-  if(moveF) dir.add(forward);
-  if(moveB) dir.sub(forward);
-  if(moveL) dir.sub(right);
-  if(moveR) dir.add(right);
-  if(dir.lengthSq()>0){ dir.normalize().multiplyScalar(speed); }
+  // Masaüstü (dijital) ve mobil (analog joystick) girişini aynı eksene birleştir
+  let fAxis = (moveF?1:0) - (moveB?1:0) + joyForward;
+  let rAxis = (moveR?1:0) - (moveL?1:0) + joyRight;
+  fAxis = Math.max(-1, Math.min(1, fAxis));
+  rAxis = Math.max(-1, Math.min(1, rAxis));
+  dir.add(forward.clone().multiplyScalar(fAxis));
+  dir.add(right.clone().multiplyScalar(rAxis));
+  const dirMag = dir.length();
+  if(dirMag > 1) dir.divideScalar(dirMag); // çapraz harekette hız artmasın
+  dir.multiplyScalar(speed);
 
   const worldMax = 60; // güvenlik sınırı (gerçek engelleme duvarlarla sağlanır)
   const nextFull = camera.position.clone().add(dir);
@@ -2238,11 +2448,14 @@ function updateMovement(dt){
     {type:'char', dist: distChar, range: characterInteractRange, text: dict[currentLang].interact},
     {type:'door', dist: nearestDoorDist, range: doorInteractRange, text: nearestDoorOpened ? dict[currentLang].interactDoorClose : dict[currentLang].interactDoorOpen},
   ].filter(c=>c.dist < c.range).sort((a,b)=>a.dist-b.dist);
+  const mobileBtn = document.getElementById('mobile-interact-btn');
   if(hintCandidates.length){
     hint.textContent = hintCandidates[0].text;
     hint.classList.add('show');
+    if(mobileBtn) mobileBtn.classList.add('show');
   } else {
     hint.classList.remove('show');
+    if(mobileBtn) mobileBtn.classList.remove('show');
   }
 
   // kapı kanadı açılma animasyonu (yumuşak geçiş)
